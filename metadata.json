@@ -1,0 +1,6 @@
+{
+  "name": "CineGemini",
+  "description": "AI-powered pre-production intelligence and collaboration platform for filmmakers - From Location Scout to Shooting Plan.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

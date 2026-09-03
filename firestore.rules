@@ -1,0 +1,149 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for secure role and project isolation
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check project membership securely
+    function isProjectMember(projectId) {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid
+      );
+    }
+
+    function getProjectMemberRole(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid)).data.role;
+    }
+
+    function isDirector(projectId) {
+      return isProjectMember(projectId) && (
+        getProjectMemberRole(projectId) == 'DIRECTOR' ||
+        get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid
+      );
+    }
+
+    function isProducer(projectId) {
+      return isProjectMember(projectId) && (
+        getProjectMemberRole(projectId) == 'PRODUCER' ||
+        get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid
+      );
+    }
+
+    function isCinematographer(projectId) {
+      return isProjectMember(projectId) && (
+        getProjectMemberRole(projectId) == 'CINEMATOGRAPHER' ||
+        get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid
+      );
+    }
+
+    // 1. User profiles: users can only read and write their own profile
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(userId);
+      allow delete: if false; // Profiles are permanent for auditability
+
+      // User Personal Journal / Interactions (owner-bound isolation)
+      match /interactions/{interactionId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // 2. Film Projects: Primary Security Boundary
+    match /projects/{projectId} {
+      allow read: if isProjectMember(projectId);
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isProjectMember(projectId);
+      allow delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+
+      // Members subcollection: only project owner can add/remove/change roles
+      match /members/{memberUid} {
+        allow read: if isProjectMember(projectId);
+        allow write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid
+        );
+      }
+
+      // Locations subcollection
+      match /locations/{locationId} {
+        allow read: if isProjectMember(projectId);
+        allow create, update, delete: if isProjectMember(projectId);
+      }
+
+      // Scenes subcollection
+      match /scenes/{sceneId} {
+        allow read: if isProjectMember(projectId);
+        allow create, update, delete: if isProjectMember(projectId);
+      }
+
+      // Shooting Days subcollection
+      match /shootDays/{dayId} {
+        allow read: if isProjectMember(projectId);
+        allow create, update, delete: if isProjectMember(projectId);
+      }
+
+      // Location Reports subcollection
+      match /reports/{reportId} {
+        allow read: if isProjectMember(projectId);
+        allow create, update: if isProjectMember(projectId);
+        allow delete: if isDirector(projectId);
+      }
+
+      // Cost Estimates subcollection (Accessible to project members; write restricted to Producer/Owner)
+      match /costEstimates/{estimateId} {
+        allow read: if isProjectMember(projectId);
+        allow write: if isProducer(projectId);
+      }
+
+      // Set Estimates subcollection
+      match /setEstimates/{setEstimateId} {
+        allow read: if isProjectMember(projectId);
+        allow write: if isProducer(projectId);
+      }
+
+      // Weather & Lighting Reports subcollection
+      match /weatherReports/{weatherReportId} {
+        allow read: if isProjectMember(projectId);
+        allow write: if isProjectMember(projectId);
+      }
+
+      // Production Plans subcollection
+      match /productionPlans/{planId} {
+        allow read: if isProjectMember(projectId);
+        allow write: if isProjectMember(projectId);
+      }
+
+      // Personal Gemini Journal Conversations (isolated per user within the project)
+      match /conversations/{conversationId} {
+        allow read, write: if isAuthenticated() && (
+          (resource == null || resource.data.userId == request.auth.uid) &&
+          (request.resource == null || request.resource.data.userId == request.auth.uid) &&
+          isProjectMember(projectId)
+        );
+      }
+
+      // Activity / Audit Logs: Read by members, written by server or verified members, NEVER modified or deleted
+      match /activityLogs/{logId} {
+        allow read: if isProjectMember(projectId);
+        allow create: if isProjectMember(projectId);
+        allow update, delete: if false; // Append-only audit integrity
+      }
+
+      // Slack Integration Configurations: NEVER exposed to client directly
+      match /slackIntegrations/{integrationId} {
+        allow read: if isProjectMember(projectId);
+        allow write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid ||
+          isProducer(projectId)
+        );
+      }
+    }
+  }
+}
