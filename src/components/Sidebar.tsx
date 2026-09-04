@@ -17,6 +17,7 @@ import {
   CheckSquare2,
   Cloud,
   KeyRound,
+  Cpu,
   LogOut,
 } from 'lucide-react';
 
@@ -44,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       label: 'Department Tools',
       items: [
         { id: 'cost_planning', label: 'Cost & Permit Intelligence', icon: DollarSign, role: 'PRODUCER' },
+        { id: 'sandbox_engine', label: 'Calculation Sandbox (SA)', icon: Cpu, role: 'PRODUCER', highlight: true },
         { id: 'weather_lighting', label: 'Sun & Lighting Advisor', icon: Sun, role: 'CINEMATOGRAPHER' },
         { id: 'journal', label: 'Gemini Creative Journal', icon: BookOpen },
       ],
@@ -76,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
                   activeTab === item.id ||
                   (item.id === 'master_report' && activeTab === 'report') ||
                   (item.id === 'cost_planning' && activeTab === 'cost-planning') ||
+                  (item.id === 'sandbox_engine' && (activeTab === 'sandbox' || activeTab === 'sandbox_engine')) ||
                   (item.id === 'production_scout' && activeTab === 'production-scout') ||
                   (item.id === 'location_swap' && activeTab === 'location-swap') ||
                   (item.id === 'weather_lighting' && activeTab === 'weather-lighting') ||

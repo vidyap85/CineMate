@@ -1,4 +1,4 @@
-# CineGemini — AI-Powered Pre-Production Intelligence Platform
+# CineMate — AI-Powered Pre-Production Intelligence Platform
 
 > **From Location Scout to Shooting Plan**: Pre-production intelligence and collaboration platform for filmmakers, directors, producers, and cinematographers (DPs).
 
@@ -10,7 +10,7 @@
 
 ## 🌟 Architecture & Core Capabilities
 
-CineGemini bridges the pre-production gap between creative vision and logistical reality:
+CineMate bridges the pre-production gap between creative vision and logistical reality:
 
 1. **Multi-Role RBAC Perspectives**:
    - **Director Perspective**: Creative vision, scene atmospheres, and AI natural language note structuring.
@@ -72,9 +72,9 @@ service cloud.firestore {
 
 ---
 
-## 🔑 2. Secret Manager IAM Setup
+## 🔑 2. Dedicated Least-Privilege Service Account & Secret Manager IAM Setup
 
-Never commit API keys. Store the Gemini API key in Google Cloud Secret Manager and bind read permissions to the Cloud Run service account:
+Never commit API keys or download private key files. We provision a dedicated user-managed service account (`cinepilot-backend-sa`) bound to least-privilege IAM roles and use **Application Default Credentials (ADC)** in Cloud Run:
 
 ```bash
 # Set your Google Cloud Project
@@ -86,39 +86,58 @@ gcloud services enable \
   run.googleapis.com \
   secretmanager.googleapis.com \
   firestore.googleapis.com \
-  artifactregistry.googleapis.com
+  artifactregistry.googleapis.com \
+  iamcredentials.googleapis.com
 
-# 2. Create the Gemini API key secret in Secret Manager
-gcloud secrets create GEMINI_API_KEY --replication-policy="automatic"
+# 2. Provision Dedicated User-Managed Service Account (CinePilot Backend)
+# Principle of Least Privilege (PoLP): NEVER use the default Compute Engine account
+gcloud iam service-accounts create cinepilot-backend-sa \
+  --description="Dedicated least-privilege identity for CinePilot backend with zero key downloads" \
+  --display-name="CinePilot Backend Service Account"
+
+export SA_EMAIL="cinepilot-backend-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# 3. Create the Gemini API key secret in Secret Manager
+gcloud secrets create GEMINI_API_KEY --replication-policy="automatic" || true
 echo -n "AIzaSy_YOUR_ACTUAL_GEMINI_API_KEY" | gcloud secrets versions add GEMINI_API_KEY --data-file=-
 
-# 3. Grant the Cloud Run compute service account access to read the secret
-PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
-
+# 4. Grant ONLY Secret Accessor role to the dedicated service account (Least Privilege)
 gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/secretmanager.secretAccessor"
+
+# 5. Local Development: Enable Service-Account Impersonation via ADC
+# (Eliminates the security risk of downloaded private key files on developer laptops)
+gcloud iam service-accounts add-iam-policy-binding ${SA_EMAIL} \
+  --member="user:$(gcloud config get-value account)" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+# Authenticate local development environment using impersonation:
+gcloud auth application-default login --impersonate-service-account=${SA_EMAIL}
 ```
+
+> **Security Mandate**: DO NOT require or generate a downloaded service-account JSON private key in production. Production Cloud Run services resolve credentials automatically via Cloud Run Service Identity (ADC). Only use a service-account JSON key if a specific legacy deployment environment cannot support ADC or Workload Identity.
 
 ---
 
-## 🚀 3. Cloud Run Deployment (with Mandatory Campaign Label)
+## 🚀 3. Cloud Run Deployment (with Dedicated Service Identity & ADC)
 
-Deploy CineGemini directly to Cloud Run with automated secret injection and the required challenge label:
+Deploy CinePilot directly to Cloud Run bound to the **dedicated service account** as its service identity. In Cloud Run, credentials resolve automatically via Application Default Credentials (ADC) with zero private keys:
 
 ```bash
-# Deploy to Google Cloud Run
-gcloud run deploy cinegemini \
+# Deploy to Google Cloud Run with Dedicated Service Identity (ADC)
+gcloud run deploy cinepilot-backend \
   --source . \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
+  --service-account="cinepilot-backend-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
   --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest" \
-  --set-env-vars="NODE_ENV=production,PROJECT_ID=project-aurora-001" \
+  --set-env-vars="NODE_ENV=production,PROJECT_ID=project-aurora-001,GCP_SERVICE_ACCOUNT_EMAIL=cinepilot-backend-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
   --labels="dev-tutorial=cloud-run-ai-challenge"
 
-# Optional: Apply or verify campaign label on existing service
-gcloud run services update cinegemini \
+# Optional: Verify or apply campaign label on existing service
+gcloud run services update cinepilot-backend \
   --update-labels=dev-tutorial=cloud-run-ai-challenge \
   --region=us-central1
 ```
@@ -133,10 +152,12 @@ gcloud run services update cinegemini \
 | **1. Input Surfaces** | Malicious XSS in location address/notes | OWASP A03 | Strict DOMPurify stripping & recursive body middleware | ✅ Mitigated |
 | **2. Planning & Reasoning** | Hallucinated solar or golden hour windows | OWASP LLM09 | Deterministic mathematical calculation via SunCalc algorithms | ✅ Mitigated |
 | **2. Planning & Reasoning** | Unsolicited model drift during synthesis | OWASP LLM07 | Zero-temperature schemas & structured JSON enforcement | ✅ Mitigated |
+| **3. Tool Execution** | Host RCE / DoS via arbitrary custom calculation formulas | OWASP A03 / LLM02 | Hardened V8 VM isolate; stripped `process`, `fs`, `require`; 2,000ms CPU timeout | ✅ Mitigated |
 | **3. Tool Execution** | SSRF via custom Slack webhooks | OWASP A10 | Domain validation enforcing `hooks.slack.com` protocol | ✅ Mitigated |
 | **3. Tool Execution** | API quota exhaustion & DoS | OWASP A04 | Per-operation sliding window rate limiting (10 req/min) | ✅ Mitigated |
 | **4. Memory & State** | Firestore crash on `undefined` payload properties | OWASP A08 | Recursive `stripUndefined` payload hygiene utility | ✅ Mitigated |
 | **4. Memory & State** | Cross-project data leakage / IDOR | OWASP A01 | Strict URL param scoping & `requireProjectMember` middleware | ✅ Mitigated |
+| **5. Inter-System Comm** | Overprivileged default Compute account & leaked private keys | OWASP A01 / PoLP | Dedicated `cinepilot-backend-sa` with ADC in Cloud Run; zero JSON keys in production; browser credential isolation | ✅ Mitigated |
 | **5. Inter-System Comm** | API key leakage to browser | OWASP A02 | Server-side Express API proxy with Secret Manager integration | ✅ Mitigated |
 | **5. Inter-System Comm** | Single-model outage disruption | OWASP A09 | 4-tier resilient Gemini model fallback ladder | ✅ Mitigated |
 
@@ -155,4 +176,4 @@ npm run dev
 npm run build
 ```
 
-Open `http://localhost:3000` to access the CineGemini platform.
+Open `http://localhost:3000` to access the CineMate platform.

@@ -11,6 +11,7 @@ import { NoteStructuringModal } from './components/Scenes/NoteStructuringModal';
 import { LocationReportView } from './components/Reports/LocationReportView';
 import { CostEstimator } from './components/CostPlanning/CostEstimator';
 import { SetEstimator } from './components/CostPlanning/SetEstimator';
+import { SandboxCalculatorView } from './components/CostPlanning/SandboxCalculatorView';
 import { WeatherLightingView } from './components/Weather/WeatherLightingView';
 import { ProductionScoutView } from './components/ProductionScout/ProductionScoutView';
 import { LocationSwapSimulator } from './components/LocationSwap/LocationSwapSimulator';
@@ -25,7 +26,7 @@ import { api } from './lib/api';
 import { INITIAL_PROJECT, INITIAL_LOCATIONS, INITIAL_SCENES, INITIAL_SHOOT_DAYS } from './data/initialData';
 import type { FilmProject, LocationItem, SceneItem, ShootDayItem, LocationReport } from './types';
 
-function CineGeminiMain() {
+function CineMateMain() {
   const { currentUser, userRole, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [project, setProject] = useState<FilmProject>(INITIAL_PROJECT);
@@ -38,7 +39,7 @@ function CineGeminiMain() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Partial<LocationItem> | null>(null);
-  const [isCostTabSubmode, setIsCostTabSubmode] = useState<'locations' | 'sets'>('locations');
+  const [isCostTabSubmode, setIsCostTabSubmode] = useState<'locations' | 'sets' | 'sandbox'>('locations');
   const [activeReport, setActiveReport] = useState<LocationReport | null>(null);
 
   useEffect(() => {
@@ -101,9 +102,9 @@ function CineGeminiMain() {
       <div className="flex h-screen w-screen items-center justify-center bg-[#0A0A0A] text-[#F5F2ED]">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 rounded-sm bg-[#C5A059] flex items-center justify-center text-black font-serif font-bold text-xl tracking-widest animate-pulse shadow-2xl">
-            CG
+            CM
           </div>
-          <span className="text-xs uppercase tracking-[0.2em] font-mono text-white/40">Loading CineGemini Studio...</span>
+          <span className="text-xs uppercase tracking-[0.2em] font-mono text-white/40">Loading CineMate Studio...</span>
         </div>
       </div>
     );
@@ -166,6 +167,7 @@ function CineGeminiMain() {
                 setEditingLocation(null);
                 setIsLocationModalOpen(true);
               }}
+              onSaveLocation={handleSaveLocation}
             />
           )}
 
@@ -176,10 +178,11 @@ function CineGeminiMain() {
                 setEditingLocation(loc);
                 setIsLocationModalOpen(true);
               }}
-              onAddNewLocation={() => {
-                setEditingLocation(null);
+              onAddNewLocation={(prefill) => {
+                setEditingLocation(prefill || null);
                 setIsLocationModalOpen(true);
               }}
+              onSaveLocation={handleSaveLocation}
               onDeleteLocation={handleDeleteLocation}
             />
           )}
@@ -209,13 +212,13 @@ function CineGeminiMain() {
             />
           )}
 
-          {(activeTab === 'cost_planning' || activeTab === 'cost-planning' || activeTab === 'set-estimate') && (
+          {(activeTab === 'cost_planning' || activeTab === 'cost-planning' || activeTab === 'set-estimate' || activeTab === 'sandbox_engine' || activeTab === 'sandbox') && (
             <div className="space-y-6">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-4 overflow-x-auto">
                 <button
                   onClick={() => setIsCostTabSubmode('locations')}
-                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer ${
-                    isCostTabSubmode === 'locations'
+                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    isCostTabSubmode === 'locations' && activeTab !== 'sandbox_engine' && activeTab !== 'sandbox'
                       ? 'bg-[#C5A059] text-black font-bold shadow-md'
                       : 'border border-white/15 text-white/60 hover:text-white hover:bg-white/5'
                   }`}
@@ -224,7 +227,7 @@ function CineGeminiMain() {
                 </button>
                 <button
                   onClick={() => setIsCostTabSubmode('sets')}
-                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer ${
+                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap ${
                     isCostTabSubmode === 'sets'
                       ? 'bg-[#C5A059] text-black font-bold shadow-md'
                       : 'border border-white/15 text-white/60 hover:text-white hover:bg-white/5'
@@ -232,9 +235,22 @@ function CineGeminiMain() {
                 >
                   Set Construction & Art Dept
                 </button>
+                <button
+                  onClick={() => setIsCostTabSubmode('sandbox')}
+                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                    isCostTabSubmode === 'sandbox' || activeTab === 'sandbox_engine' || activeTab === 'sandbox'
+                      ? 'bg-[#C5A059] text-black font-bold shadow-md'
+                      : 'border border-[#C5A059]/40 text-[#C5A059] hover:bg-[#C5A059]/10'
+                  }`}
+                >
+                  <span>Calculation Sandbox & PoLP SA</span>
+                  <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 font-mono">SA Active</span>
+                </button>
               </div>
 
-              {isCostTabSubmode === 'locations' ? (
+              {activeTab === 'sandbox_engine' || activeTab === 'sandbox' || isCostTabSubmode === 'sandbox' ? (
+                <SandboxCalculatorView />
+              ) : isCostTabSubmode === 'locations' ? (
                 <CostEstimator locations={locations} />
               ) : (
                 <SetEstimator />
@@ -303,7 +319,7 @@ function CineGeminiMain() {
 export default function App() {
   return (
     <AuthProvider>
-      <CineGeminiMain />
+      <CineMateMain />
     </AuthProvider>
   );
 }

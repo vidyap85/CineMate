@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab = 'dashboard', setActi
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-light tracking-[0.25em] text-[#F5F2ED] uppercase">CineGemini</span>
+                <span className="text-lg font-light tracking-[0.25em] text-[#F5F2ED] uppercase">CineMate</span>
                 <span className="text-[9px] uppercase tracking-[0.2em] font-mono px-1.5 py-0.5 rounded border border-[#C5A059]/30 text-[#C5A059] bg-[#C5A059]/10">
                   STUDIO AI
                 </span>

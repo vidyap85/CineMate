@@ -25,7 +25,7 @@ export const LocationReportView: React.FC<LocationReportViewProps> = ({
       projectName: 'Project Aurora',
       title: 'Project Aurora - Master Location Shooting Report',
       generatedAt: '2026-09-02T04:00:00Z',
-      generatedBy: 'Vidya (Director) & CineGemini AI',
+      generatedBy: 'Vidya (Director) & CineMate AI',
       version: 1,
       overallProductionScore: 84,
       executiveSummary:
@@ -190,7 +190,7 @@ export const LocationReportView: React.FC<LocationReportViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `CineGemini_Project_Aurora_Shooting_Plan_v${report.version}.md`;
+    a.download = `CineMate_Project_Aurora_Shooting_Plan_v${report.version}.md`;
     a.click();
   };
 

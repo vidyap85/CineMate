@@ -3,6 +3,7 @@ import { requireAuth, requireProjectMember } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimiter.js';
 import { generateContentWithFallback, sanitizeUntrustedInput, parseCleanJson } from '../gemini.js';
 import { recordAuditLog, recordApiMetrics } from '../observability.js';
+import { aiSearchCache, aiReverseScoutCache, aiEstimationCache } from '../cache.js';
 import type { LocationReport, LocationCostEstimate, AlternativeLocation, SetConstructionEstimate, ProductionScoutAnalysis, LocationSwapComparison } from '../../src/types.js';
 
 export const geminiRouter = Router();
@@ -20,7 +21,7 @@ geminiRouter.post('/:projectId/gemini/structure-note', requireAuth, requireProje
 
   const cleanNote = sanitizeUntrustedInput(rawNote);
 
-  const prompt = `You are CineGemini's Production Intelligence Assistant.
+  const prompt = `You are CineMate's Production Intelligence Assistant.
 Analyze the filmmaker's natural language note and extract structured scene parameters.
 
 DIRECTOR NOTE:
@@ -43,7 +44,8 @@ Extract and respond ONLY with a valid JSON object strictly matching this schema:
     const { text, modelUsed } = await generateContentWithFallback(prompt, {
       systemInstruction: 'You are an expert film 1st Assistant Director and Production Coordinator. Always output strictly valid JSON.',
       responseJson: true,
-      temperature: 0.2,
+      temperature: 0.1,
+      maxOutputTokens: 600,
     });
 
     const parsed = parseCleanJson(text, {
@@ -88,7 +90,7 @@ geminiRouter.post('/:projectId/gemini/generate-report', requireAuth, requireProj
   const startTime = Date.now();
   const { locations, scenes, shootDays } = req.body;
 
-  const prompt = `You are CineGemini's Senior Production Producer and 1st AD.
+  const prompt = `You are CineMate's Senior Production Producer and 1st AD.
 Generate a comprehensive, production-ready Location Shooting Report synthesizing Director vision, Producer cost/permit parameters, and Cinematographer lighting/weather constraints for film project "Project Aurora".
 
 LOCATIONS:
@@ -195,7 +197,7 @@ geminiRouter.post('/:projectId/gemini/cost-estimate', requireAuth, requireProjec
   const startTime = Date.now();
   const { locationName, city = 'Dubai', country = 'UAE', crewSize = 35, shootingDays = 1, currency = 'AED', specialRequirements = '' } = req.body;
 
-  const prompt = `You are CineGemini's Film Line Producer and Location Scout.
+  const prompt = `You are CineMate's Film Line Producer and Location Scout.
 Estimate realistic indicative production and location costs for filming at "${locationName}" in ${city}, ${country}.
 
 PARAMETERS:
@@ -319,7 +321,7 @@ geminiRouter.post('/:projectId/gemini/alternatives', requireAuth, requireProject
   const startTime = Date.now();
   const { locationName, category = 'Waterfront', budgetConstraint = 'Lower Cost', aesthetic = 'Neo-Noir' } = req.body;
 
-  const prompt = `You are CineGemini's Location Scout Specialist.
+  const prompt = `You are CineMate's Location Scout Specialist.
 The Producer is seeking budget-friendly or logistically superior alternative locations for:
 Location: "${locationName}" (${category})
 Target Aesthetic: ${aesthetic}
@@ -365,6 +367,261 @@ Return ONLY valid JSON matching:
   }
 });
 
+// 4b. AI Location Scout & Pinning Search
+geminiRouter.post('/:projectId/gemini/scout-search', requireAuth, requireProjectMember, aiRateLimiter, async (req, res) => {
+  const startTime = Date.now();
+  const { query, city = 'Dubai', country = 'UAE' } = req.body;
+
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    return res.status(400).json({ error: 'Query string is required' });
+  }
+
+  const cleanQuery = sanitizeUntrustedInput(query.trim());
+  const cacheKey = `scout:${cleanQuery.toLowerCase()}:${city.toLowerCase()}:${country.toLowerCase()}`;
+
+  // Instant in-memory cache hit (<2ms latency)
+  const cached = aiSearchCache.get<Array<{
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    category: string;
+    notes: string;
+    lightingNotes: string;
+    permitStatus: string;
+    permitAdvice: string;
+    estimatedCostRange: { low: number; expected: number; high: number; currency: string };
+    suggestedShootingDay: number;
+  }>>(cacheKey);
+
+  if (cached) {
+    res.setHeader('X-Cache-Status', 'HIT');
+    return res.json({
+      success: true,
+      results: cached,
+      modelUsed: 'in-memory-cache',
+      cached: true,
+      executionLatencyMs: Date.now() - startTime,
+    });
+  }
+
+  const prompt = `You are CineMate's Senior Location Scout & Geospatial Intelligence Officer for film production "Project Aurora".
+The filmmaker is searching for a location to scout and PIN to their project:
+SEARCH QUERY: "${cleanQuery}"
+TARGET REGION/CONTEXT: ${city}, ${country} (or determine actual location if query references a specific global city/country)
+
+Provide 1 to 3 accurate, real-world candidate locations matching this search with real geographic coordinates, address, and film production metadata.
+For example, if the query is "bur dubai temple", locate the authentic Hindu Temple complex / Shiva & Krishna Mandir in Al Souq Al Kabeer / Al Fahidi heritage area, Bur Dubai, Dubai, UAE with real GPS coordinates (~25.2655° N, ~55.2974° E).
+
+Output ONLY valid JSON matching:
+{
+  "results": [
+    {
+      "name": string (exact landmark/site name),
+      "address": string (full real street address, district, city, country),
+      "latitude": number (accurate WGS84 latitude),
+      "longitude": number (accurate WGS84 longitude),
+      "category": "Waterfront" | "Heritage" | "Industrial" | "Desert" | "Urban" | "Studio",
+      "notes": string (concise visual description of filming atmosphere, architecture, character blocking potential),
+      "lightingNotes": string (solar orientation, shadow depth, best time of day to shoot),
+      "permitStatus": "VERIFIED" | "USER_PROVIDED" | "PENDING_DFTC",
+      "permitAdvice": string (specific permit requirements e.g. DFTC permit, private property permission, drone clearance),
+      "estimatedCostRange": {
+        "low": number,
+        "expected": number,
+        "high": number,
+        "currency": "AED"
+      },
+      "suggestedShootingDay": number (1, 2, or 3)
+    }
+  ]
+}`;
+
+  try {
+    const { text, modelUsed } = await generateContentWithFallback(prompt, {
+      systemInstruction: 'You are an elite film location scout and GIS specialist. Output valid JSON strictly.',
+      responseJson: true,
+      temperature: 0.1,
+      maxOutputTokens: 900,
+    });
+
+    const parsed = parseCleanJson<{
+      results: Array<{
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        category: string;
+        notes: string;
+        lightingNotes: string;
+        permitStatus: string;
+        permitAdvice: string;
+        estimatedCostRange: { low: number; expected: number; high: number; currency: string };
+        suggestedShootingDay: number;
+      }>;
+    }>(text, { results: [] });
+
+    if (parsed.results && parsed.results.length > 0) {
+      aiSearchCache.set(cacheKey, parsed.results, 1000 * 60 * 60); // 1-hour cache
+    }
+
+    recordApiMetrics('GEMINI', Date.now() - startTime, true);
+    recordAuditLog({
+      projectId: req.projectId!,
+      userId: req.user!.uid,
+      userName: req.user!.name,
+      userRole: req.user!.role,
+      action: 'LOCATION_SCOUT_SEARCHED',
+      resourceType: 'LOCATION',
+      details: `Scouted locations for query: "${cleanQuery}" via ${modelUsed}`,
+    });
+
+    res.json({
+      success: true,
+      results: parsed.results || [],
+      modelUsed,
+      cached: false,
+      executionLatencyMs: Date.now() - startTime,
+    });
+  } catch (err: unknown) {
+    recordApiMetrics('GEMINI', Date.now() - startTime, false);
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: 'Location scout search failed', details: msg });
+  }
+});
+
+// 4c. Current GPS Location Reverse-Scout & Pin
+geminiRouter.post('/:projectId/gemini/reverse-scout', requireAuth, requireProjectMember, aiRateLimiter, async (req, res) => {
+  const startTime = Date.now();
+  const { latitude, longitude, accuracy, userNote = '' } = req.body;
+
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return res.status(400).json({ error: 'Valid numerical latitude and longitude are required' });
+  }
+
+  const cleanNote = sanitizeUntrustedInput(userNote || '');
+  const gridKey = `reverse:${latitude.toFixed(3)},${longitude.toFixed(3)}:${cleanNote.toLowerCase().slice(0, 30)}`;
+
+  // Check in-memory reverse scout cache
+  const cachedLoc = aiReverseScoutCache.get<{
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    category: string;
+    notes: string;
+    lightingNotes: string;
+    permitStatus: string;
+    permitAdvice: string;
+    estimatedCostRange: { low: number; expected: number; high: number; currency: string };
+    suggestedShootingDay: number;
+  }>(gridKey);
+
+  if (cachedLoc) {
+    res.setHeader('X-Cache-Status', 'HIT');
+    return res.json({
+      success: true,
+      location: cachedLoc,
+      modelUsed: 'in-memory-cache',
+      cached: true,
+      executionLatencyMs: Date.now() - startTime,
+    });
+  }
+
+  const prompt = `You are CineMate's Senior Location Scout & Geospatial Intelligence Officer for film production "Project Aurora".
+The film director or scout is currently ON LOCATION at exact GPS coordinates:
+- Latitude: ${latitude}° N
+- Longitude: ${longitude}° E
+- Device Accuracy: ${accuracy ? `${accuracy} meters` : 'High GPS'}
+- Director's Live Field Note: "${cleanNote || 'Spotted a striking visual building/site on the road to scout for shooting'}"
+
+Based on these exact coordinates:
+1. Reverse-identify the real-world street, district, neighborhood, and city (e.g. if near 25.26° N, 55.29° E identify Bur Dubai/Al Fahidi; if in Kerala or anywhere globally, identify the authentic local area).
+2. Generate an evocative film location title incorporating the director's visual impression (e.g. "Old Heritage Villa - Jumeirah Road" or "Traditional Courtyard House Exterior").
+3. Determine category, filming atmosphere notes, sunlight orientation / best time of day, and realistic film permit requirements (e.g., DFTC permit, private residential owner clearance, sound recording noise levels).
+4. Provide realistic daily location fee estimates.
+
+Output ONLY valid JSON strictly matching:
+{
+  "name": string,
+  "address": string,
+  "latitude": ${latitude},
+  "longitude": ${longitude},
+  "category": "Heritage" | "Waterfront" | "Urban" | "Interior" | "Industrial" | "Desert" | "Studio",
+  "notes": string,
+  "lightingNotes": string,
+  "permitStatus": "USER_PROVIDED",
+  "permitAdvice": string,
+  "estimatedCostRange": {
+    "low": number,
+    "expected": number,
+    "high": number,
+    "currency": "AED"
+  },
+  "suggestedShootingDay": number
+}`;
+
+  try {
+    const { text, modelUsed } = await generateContentWithFallback(prompt, {
+      systemInstruction: 'You are an elite film location scout and GIS specialist. Output valid JSON strictly.',
+      responseJson: true,
+      temperature: 0.1,
+      maxOutputTokens: 600,
+    });
+
+    const parsed = parseCleanJson<{
+      name: string;
+      address: string;
+      latitude: number;
+      longitude: number;
+      category: string;
+      notes: string;
+      lightingNotes: string;
+      permitStatus: string;
+      permitAdvice: string;
+      estimatedCostRange: { low: number; expected: number; high: number; currency: string };
+      suggestedShootingDay: number;
+    }>(text, {
+      name: cleanNote ? `Scouted Spot: ${cleanNote.slice(0, 30)}` : 'Current Scouted Spot',
+      address: `Near GPS ${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`,
+      latitude,
+      longitude,
+      category: 'Heritage',
+      notes: cleanNote || 'Field scouted spot marked by director.',
+      lightingNotes: 'Natural ambient lighting; evaluate sun angle relative to road direction.',
+      permitStatus: 'USER_PROVIDED',
+      permitAdvice: 'Requires standard filming permit and private property clearance.',
+      estimatedCostRange: { low: 3000, expected: 8000, high: 15000, currency: 'AED' },
+      suggestedShootingDay: 1,
+    });
+
+    aiReverseScoutCache.set(gridKey, parsed, 1000 * 60 * 60);
+
+    recordApiMetrics('GEMINI', Date.now() - startTime, true);
+    recordAuditLog({
+      projectId: req.projectId!,
+      userId: req.user!.uid,
+      userName: req.user!.name,
+      userRole: req.user!.role,
+      action: 'CURRENT_LOCATION_PINNED',
+      resourceType: 'LOCATION',
+      details: `Reverse-scouted current GPS spot (${latitude}, ${longitude}) via ${modelUsed}`,
+    });
+
+    res.json({
+      success: true,
+      location: parsed,
+      modelUsed,
+      cached: false,
+      executionLatencyMs: Date.now() - startTime,
+    });
+  } catch (err: unknown) {
+    recordApiMetrics('GEMINI', Date.now() - startTime, false);
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: 'Reverse location scouting failed', details: msg });
+  }
+});
+
 // 5. Set Construction Estimator
 geminiRouter.post('/:projectId/gemini/set-estimate', requireAuth, requireProjectMember, aiRateLimiter, async (req, res) => {
   const startTime = Date.now();
@@ -372,7 +629,7 @@ geminiRouter.post('/:projectId/gemini/set-estimate', requireAuth, requireProject
 
   const cleanDescription = sanitizeUntrustedInput(setDescription || 'Old Kerala village house exterior with courtyard, approximately 2,000 sq ft');
 
-  const prompt = `You are CineGemini's Production Designer and Art Director.
+  const prompt = `You are CineMate's Production Designer and Art Director.
 Estimate set construction costs and timeline for:
 """${cleanDescription}"""
 Set Size: ${setSizeSqFt} sq ft
@@ -513,7 +770,7 @@ geminiRouter.post('/:projectId/gemini/cinematic-advisor', requireAuth, requirePr
   const startTime = Date.now();
   const { locationName, targetTime = '05:45 AM', targetDate = '2026-09-15', weatherData, userQuery } = req.body;
 
-  const prompt = `You are CineGemini's Master Cinematographer (ASC/BSC).
+  const prompt = `You are CineMate's Master Cinematographer (ASC/BSC).
 The DP is asking: "${userQuery || `Is ${targetTime} a good time to shoot at ${locationName}?`}"
 
 LOCATION: ${locationName}
@@ -583,7 +840,7 @@ geminiRouter.post('/:projectId/gemini/production-scout', requireAuth, requirePro
   const startTime = Date.now();
   const { locations, scenes, shootDays } = req.body;
 
-  const prompt = `You are CineGemini's Lead AI Production Scout.
+  const prompt = `You are CineMate's Lead AI Production Scout.
 Analyze the entire film pre-production dataset across all 3 roles:
 - Director: Scenes, shooting times, artistic intent
 - Producer: Budgets, permits, travel distances, crew scaling
@@ -705,7 +962,7 @@ geminiRouter.post('/:projectId/gemini/location-swap', requireAuth, requireProjec
     weatherSuitability: 'Subject to morning humidity and rising pedestrian footfall',
   };
 
-  const prompt = `You are CineGemini's Location Swap Simulator.
+  const prompt = `You are CineMate's Location Swap Simulator.
 Compare CURRENT Location vs CANDIDATE ALTERNATIVE Location for a film production:
 
 SCENE VISION:
@@ -807,11 +1064,11 @@ geminiRouter.post('/:projectId/gemini/journal-chat', requireAuth, requireProject
 
   const systemInstructionsByRole: Record<string, string> = {
     DIRECTOR:
-      'You are CineGemini Personal Journal Assistant for the Director. Help brainstorm visual storytelling, scene sequencing, character blocking, emotional rhythm, and location atmosphere. Keep responses insightful, crisp, and filmic.',
+      'You are CineMate Personal Journal Assistant for the Director. Help brainstorm visual storytelling, scene sequencing, character blocking, emotional rhythm, and location atmosphere. Keep responses insightful, crisp, and filmic.',
     PRODUCER:
-      'You are CineGemini Personal Journal Assistant for the Producer. Help analyze production logistics, crew efficiency, permit negotiations, risk mitigation, and budget optimization.',
+      'You are CineMate Personal Journal Assistant for the Producer. Help analyze production logistics, crew efficiency, permit negotiations, risk mitigation, and budget optimization.',
     CINEMATOGRAPHER:
-      'You are CineGemini Personal Journal Assistant for the Director of Photography (Cinematographer). Help explore focal lengths, lighting ratios, solar trajectories, color temperatures, atmospheric filters, and shadow styling.',
+      'You are CineMate Personal Journal Assistant for the Director of Photography (Cinematographer). Help explore focal lengths, lighting ratios, solar trajectories, color temperatures, atmospheric filters, and shadow styling.',
   };
 
   const roleInstruction = systemInstructionsByRole[userRole] || systemInstructionsByRole.DIRECTOR;

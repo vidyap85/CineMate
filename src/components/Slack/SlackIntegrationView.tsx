@@ -54,7 +54,7 @@ export const SlackIntegrationView: React.FC<SlackIntegrationViewProps> = ({
       projectName: 'Project Aurora',
       title: 'Project Aurora - Master Location Shooting Intelligence Plan',
       generatedAt: new Date().toISOString(),
-      generatedBy: 'Vidya (Director) & CineGemini AI',
+      generatedBy: 'Vidya (Director) & CineMate AI',
       version: 1,
       overallProductionScore: 84,
       executiveSummary:
@@ -292,7 +292,7 @@ export const SlackIntegrationView: React.FC<SlackIntegrationViewProps> = ({
                   id="slack-webhook-url-input"
                 />
                 <p className="text-[10px] text-white/40 leading-relaxed font-sans">
-                  Leave empty to test with CineGemini's built-in sandbox Slack simulator.
+                  Leave empty to test with CineMate's built-in sandbox Slack simulator.
                 </p>
               </div>
 
@@ -344,11 +344,11 @@ export const SlackIntegrationView: React.FC<SlackIntegrationViewProps> = ({
             {/* Message Bot Header */}
             <div className="flex items-start gap-3">
               <div className="h-9 w-9 rounded-lg bg-[#C5A059] flex items-center justify-center text-black font-black text-xs shrink-0 shadow-md">
-                CG
+                CM
               </div>
               <div className="space-y-2 flex-1 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-xs">CineGemini Bot</span>
+                  <span className="font-bold text-white text-xs">CineMate Bot</span>
                   <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-[9px] font-mono text-zinc-400 border border-zinc-700">APP</span>
                   <span className="text-zinc-500 text-[11px]">Today at 05:00 AM</span>
                 </div>
@@ -357,7 +357,7 @@ export const SlackIntegrationView: React.FC<SlackIntegrationViewProps> = ({
                 <div className="border-l-4 border-[#C5A059] bg-[#222529] p-4 rounded-r-xl space-y-3.5 text-zinc-200 shadow-inner">
                   <div>
                     <div className="font-bold text-white text-sm flex items-center gap-2">
-                      <span>🎬 CINEGEMINI | PROJECT AURORA</span>
+                      <span>🎬 CINEMATE | PROJECT AURORA</span>
                     </div>
                     <div className="text-[11px] font-mono text-amber-300/90 mt-0.5">
                       LOCATION & SHOOTING INTELLIGENCE REPORT • Score: 84/100

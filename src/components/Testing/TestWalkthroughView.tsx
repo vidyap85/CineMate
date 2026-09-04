@@ -93,6 +93,32 @@ export const TestWalkthroughView: React.FC = () => {
       ],
       automatedTest: 'journal_isolation_check',
     },
+    {
+      id: 'sandbox_execution_suite',
+      title: '8. Backend Calculation Sandbox & Adversarial Containment Test',
+      description: 'Tests V8 VM isolate execution, Monte Carlo risk trials, union payroll calculation, and adversarial escape containment.',
+      steps: [
+        'Open "Calculation Sandbox (SA)" from Department Tools or "Calculation Sandbox & PoLP SA" tab in Cost Planning.',
+        'Run 1,000 Monte Carlo simulation runs; verify P50, P75, P90, P99 risk curves calculate in under 25ms.',
+        'Switch to "Union & Turnaround Rules" tab; test 14.5 hr shift with 9.5 hr turnaround rest and verify overtime + violation penalty computation.',
+        'Switch to "Adversarial Sandbox & Custom Formulas" tab; click "Attack Test: Access process.env".',
+        'Verify sandbox intercepts access (`ReferenceError: process is not defined`), flags `ATTEMPTED_PROCESS_GLOBAL_ACCESS`, and keeps server host intact.',
+        'Test "Attack Test: Infinite Loop DoS" and verify 2,000ms CPU execution cap triggers cleanly without freezing Node.js event loop.',
+      ],
+      automatedTest: 'sandbox_containment_check',
+    },
+    {
+      id: 'service_account_polp_suite',
+      title: '9. Dedicated Least-Privilege Service Account (PoLP) Test',
+      description: 'Verifies dedicated service account identity enforcement and rejection of default Compute Engine credentials.',
+      steps: [
+        'Inspect the Service Account status banner at top of Calculation Sandbox view.',
+        'Verify dedicated email matches `cinemate-sandbox-sa@cinegemini-prod.iam.gserviceaccount.com`.',
+        'Verify "PoLP Enforced" and "Default compute account (*-compute@) explicitly rejected" security assertions.',
+        'Click "4. Gemini Python Container Sandbox" and trigger ephemeral Python code execution in Google Cloud container.',
+      ],
+      automatedTest: 'service_account_polp_check',
+    },
   ];
 
   const handleRunAllTests = async () => {

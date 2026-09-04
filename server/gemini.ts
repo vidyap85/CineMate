@@ -4,14 +4,14 @@ import { getSecret } from './secrets.js';
 /**
  * Resilient Gemini Generation Protocol with Multi-Model Fallback Ladder
  * Ordered by latency and availability:
- * 1. gemini-3.6-flash (Primary)
- * 2. gemini-3.1-flash-lite (High-Availability Fallback)
- * 3. gemini-flash-latest (Dynamic Alias)
+ * 1. gemini-3.1-flash-lite (Primary ultra-low latency model - sub-second time-to-first-token)
+ * 2. gemini-3.8-flash (High-capability modern Flash model)
+ * 3. gemini-flash-latest (Dynamic Flash alias)
  * 4. gemini-3.7-flash (Deep Reasoning Fallback)
  */
 const MODEL_FALLBACK_LADDER = [
-  'gemini-3.6-flash',
   'gemini-3.1-flash-lite',
+  'gemini-3.8-flash',
   'gemini-flash-latest',
   'gemini-3.7-flash',
 ];
@@ -39,6 +39,8 @@ export interface GenerateContentOptions {
   systemInstruction?: string;
   responseJson?: boolean;
   temperature?: number;
+  maxOutputTokens?: number;
+  preferredModel?: string;
 }
 
 /**
@@ -54,11 +56,14 @@ export async function generateContentWithFallback(
   }
 
   let lastError: Error | null = null;
+  const modelsToTry = options.preferredModel
+    ? [options.preferredModel, ...MODEL_FALLBACK_LADDER.filter((m) => m !== options.preferredModel)]
+    : MODEL_FALLBACK_LADDER;
 
-  for (const model of MODEL_FALLBACK_LADDER) {
+  for (const model of modelsToTry) {
     try {
       const config: Record<string, unknown> = {
-        temperature: options.temperature ?? 0.4,
+        temperature: options.temperature ?? 0.2,
       };
 
       if (options.systemInstruction) {
@@ -67,6 +72,10 @@ export async function generateContentWithFallback(
 
       if (options.responseJson) {
         config.responseMimeType = 'application/json';
+      }
+
+      if (options.maxOutputTokens) {
+        config.maxOutputTokens = options.maxOutputTokens;
       }
 
       const response = await ai.models.generateContent({

@@ -79,6 +79,16 @@ export const THREAT_SCENARIOS: ThreatScenario[] = [
     status: 'ENFORCED',
     verificationTest: 'Send burst of requests; verify 429 response after limit reached.',
   },
+  {
+    id: 'THREAT-07B',
+    zone: 'Tool Execution',
+    title: 'Host Remote Code Execution (RCE) via User-Defined Calculation Formulas',
+    owaspCategory: 'OWASP A03 / OWASP LLM02: Dynamic Code Execution',
+    threatDescription: 'Adversarial user submits malicious JavaScript formulas attempting to invoke process.exit(), child_process, or require("fs").',
+    countermeasure: 'Isolated Node.js V8 VM context (`vm.createContext`) with stripped process/fs/require, strict pre-parse regex filters, and a 2,000ms CPU execution timeout.',
+    status: 'ENFORCED',
+    verificationTest: 'Submit `process.env.GEMINI_API_KEY` into formula sandbox; verify ReferenceError and active security containment.',
+  },
 
   // Zone 4: Memory & State
   {
@@ -123,12 +133,32 @@ export const THREAT_SCENARIOS: ThreatScenario[] = [
     status: 'ENFORCED',
     verificationTest: 'Open report URL in incognito browser; verify redirect to Firebase login.',
   },
+  {
+    id: 'THREAT-12',
+    zone: 'Inter-System Communication',
+    title: 'Default Compute Engine Service Account Overprivilege & Credential Abuse',
+    owaspCategory: 'OWASP A01 / PoLP: Principle of Least Privilege',
+    threatDescription: 'Running backend workloads with the default Google Compute Engine service account (`-compute@developer.gserviceaccount.com`), granting excessive project-wide Editor/Owner privileges.',
+    countermeasure: 'Dedicated `cinepilot-backend-sa` service account enforced in runtime and deployment manifests; explicit rejection of default compute account via programmatic identity verification.',
+    status: 'ENFORCED',
+    verificationTest: 'Query `/api/sandbox/identity`; verify `isDedicated: true` and `defaultComputeRejected: true`.',
+  },
+  {
+    id: 'THREAT-13',
+    zone: 'Inter-System Communication',
+    title: 'Production Private Key Exposure & Browser Credential Leakage',
+    owaspCategory: 'OWASP A02: Cryptographic Failures / Cloud Identity Hygiene',
+    threatDescription: 'Downloading and committing service-account JSON private key files in production containers or exposing backend tokens to the client browser.',
+    countermeasure: 'Cloud Run Service Identity via Application Default Credentials (ADC) eliminates downloaded JSON keys; local dev uses ADC/impersonation; all credentials resolve strictly server-side.',
+    status: 'ENFORCED',
+    verificationTest: 'Audit codebase and containers for *.json keys; verify /api/sandbox/identity confirms zero private key requirement in production.',
+  },
 ];
 
 // GET /api/threat-model
 threatModelRouter.get('/', (_req, res) => {
   res.json({
-    framework: 'CineGemini Agentic Threat Modeling Matrix',
+    framework: 'CineMate Agentic Threat Modeling Matrix',
     totalScenarios: THREAT_SCENARIOS.length,
     scenarios: THREAT_SCENARIOS,
   });

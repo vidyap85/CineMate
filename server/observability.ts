@@ -77,14 +77,14 @@ export function getProjectAuditLogs(projectId: string): AuditLogItem[] {
   return auditLogs.filter((l) => l.projectId === projectId || l.projectId === 'ALL');
 }
 
-export function recordApiMetrics(type: 'AUTH_SUCCESS' | 'AUTH_FAIL' | 'GEMINI' | 'SLACK', latencyMs = 0, success = true) {
+export function recordApiMetrics(type: 'AUTH_SUCCESS' | 'AUTH_FAIL' | 'GEMINI' | 'SLACK' | 'SANDBOX', latencyMs = 0, success = true) {
   totalRequests++;
   if (type === 'AUTH_SUCCESS') {
     authAttempts++;
     authSuccesses++;
   } else if (type === 'AUTH_FAIL') {
     authAttempts++;
-  } else if (type === 'GEMINI') {
+  } else if (type === 'GEMINI' || type === 'SANDBOX') {
     geminiCalls++;
     if (success) geminiSuccesses++;
     geminiTotalLatencyMs += latencyMs;

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Film, Sparkles, MapPin, Clock, Sun, Send, Plus, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { Film, Sparkles, MapPin, Clock, Sun, Send, Plus, ArrowRight, Loader2, CheckCircle2, Navigation } from 'lucide-react';
 import type { FilmProject, LocationItem, SceneItem, ShootDayItem } from '../../types';
 import { api } from '../../lib/api';
+import { CurrentLocationModal } from '../Locations/CurrentLocationModal';
 
 interface DirectorDashboardProps {
   project: FilmProject;
@@ -24,6 +25,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({
 }) => {
   const [quickNote, setQuickNote] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCurrentLocModalOpen, setIsCurrentLocModalOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
   const handleQuickStructure = async (e: React.FormEvent) => {
@@ -85,10 +87,19 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsCurrentLocModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-3.5 bg-[#C5A059]/15 hover:bg-[#C5A059]/25 text-[#C5A059] border border-[#C5A059]/40 font-bold text-xs uppercase tracking-[0.15em] transition-all cursor-pointer shadow-sm"
+              id="director-pin-current-spot-btn"
+              title="Pin your current GPS location and analyze filming viability"
+            >
+              <Navigation className="h-3.5 w-3.5" />
+              <span>Pin Current Spot</span>
+            </button>
             <button
               onClick={onOpenNoteModal}
-              className="flex items-center gap-2.5 px-6 py-3.5 bg-[#C5A059] hover:bg-[#d4b06a] text-black font-bold text-xs uppercase tracking-[0.2em] transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-2 px-6 py-3.5 bg-[#C5A059] hover:bg-[#d4b06a] text-black font-bold text-xs uppercase tracking-[0.2em] transition-all shadow-sm cursor-pointer"
               id="director-open-note-modal-btn"
             >
               <Sparkles className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -96,7 +107,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('master_report')}
-              className="flex items-center gap-2.5 px-6 py-3.5 border border-white/20 hover:border-white/40 hover:bg-white/5 text-[#F5F2ED] text-xs uppercase tracking-[0.15em] font-medium transition-all"
+              className="flex items-center gap-2 px-6 py-3.5 border border-white/20 hover:border-white/40 hover:bg-white/5 text-[#F5F2ED] text-xs uppercase tracking-[0.15em] font-medium transition-all"
             >
               <Film className="h-3.5 w-3.5 text-[#C5A059]" />
               <span>Shooting Report</span>
@@ -133,7 +144,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-[11px] text-white/40 max-w-xl font-light">
-              Type freely in natural language — CineGemini automatically parses Shoot Day, Scene #, Location, Time, Lighting, and Permit parameters.
+              Type freely in natural language — CineMate automatically parses Shoot Day, Scene #, Location, Time, Lighting, and Permit parameters.
             </p>
             <button
               type="submit"
@@ -179,24 +190,31 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({
             return (
               <div
                 key={day.dayId}
-                className="rounded-none border border-white/10 bg-white/[0.015] p-5 space-y-4 hover:border-white/20 transition-colors"
+                className="rounded-none border border-white/10 bg-white/[0.015] p-5 space-y-4 hover:border-white/20 transition-colors overflow-hidden"
               >
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <div>
-                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-none bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/30 font-medium">
+                <div className="border-b border-white/10 pb-3.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-none bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/30 font-medium shrink-0">
                       Day {day.dayNumber}
                     </span>
-                    <h3 className="font-serif text-sm font-normal text-[#F5F2ED] mt-1.5 truncate">{day.title}</h3>
+                    <span className="text-[11px] font-mono text-white/50 bg-white/[0.03] px-2 py-0.5 border border-white/10 shrink-0 whitespace-nowrap">
+                      {day.date}
+                    </span>
                   </div>
-                  <span className="text-[11px] font-mono text-white/40">{day.date}</span>
+                  <h3
+                    className="font-serif text-base font-normal text-[#F5F2ED] leading-snug line-clamp-2"
+                    title={day.title}
+                  >
+                    {day.title}
+                  </h3>
                 </div>
 
                 <div className="flex items-center gap-4 text-[11px] text-white/50 uppercase tracking-wider font-mono">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <Clock className="h-3.5 w-3.5 text-[#C5A059]" />
                     <span>Call: {day.callTime}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <Film className="h-3.5 w-3.5 text-[#C5A059]" />
                     <span>{dayScenes.length} Scene(s)</span>
                   </div>
@@ -264,6 +282,26 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Current GPS Location Scouting Modal */}
+      <CurrentLocationModal
+        isOpen={isCurrentLocModalOpen}
+        onClose={() => setIsCurrentLocModalOpen(false)}
+        onSaveLocation={async (loc) => {
+          try {
+            await api.createLocation(project.projectId, {
+              ...loc,
+              estimatedCostRange: loc.estimatedCostRange || { low: 3000, expected: 8000, high: 15000, currency: 'AED' },
+              shootingDays: loc.shootingDays || [1],
+            });
+            setSuccessBanner(`Pinned "${loc.name}" to Project Aurora locations!`);
+            onRefreshData();
+            setTimeout(() => setSuccessBanner(null), 5000);
+          } catch (err: unknown) {
+            alert('Failed to save location: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        }}
+      />
     </div>
   );
 };

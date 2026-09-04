@@ -10,22 +10,39 @@ export const DeploymentGuideView: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const secretManagerCmd = `# 1. Create Secret in Secret Manager
-gcloud secrets create GEMINI_API_KEY --replication-policy="automatic"
+  const serviceAccountSetupCmd = `# 1. Create Dedicated User-Managed Service Account (CinePilot Backend)
+gcloud iam service-accounts create cinepilot-backend-sa \\
+  --description="Dedicated least-privilege service account for CinePilot backend" \\
+  --display-name="CinePilot Backend Service Account"
+
+PROJECT_ID=$(gcloud config get-value project)
+SA_EMAIL="cinepilot-backend-sa@\${PROJECT_ID}.iam.gserviceaccount.com"
+
+# 2. Grant Least-Privilege Access to Secret Manager (GEMINI_API_KEY only)
+gcloud secrets create GEMINI_API_KEY --replication-policy="automatic" || true
 echo -n "YOUR_GEMINI_API_KEY" | gcloud secrets versions add GEMINI_API_KEY --data-file=-
 
-# 2. Grant Cloud Run Service Account Access
-PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
 gcloud secrets add-iam-policy-binding GEMINI_API_KEY \\
-  --member="serviceAccount:\${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \\
+  --member="serviceAccount:\${SA_EMAIL}" \\
   --role="roles/secretmanager.secretAccessor"`;
 
-  const cloudRunDeployCmd = `# 3. Build & Deploy to Google Cloud Run with Campaign Label
-gcloud run deploy cinegemini-app \\
+  const localImpersonationCmd = `# Local Development: Use Application Default Credentials (ADC)
+# or Service-Account Impersonation (NO JSON keys downloaded to local machine)
+gcloud iam service-accounts add-iam-policy-binding \${SA_EMAIL} \\
+  --member="user:$(gcloud config get-value account)" \\
+  --role="roles/iam.serviceAccountTokenCreator"
+
+# Login with Impersonation for Local ADC
+gcloud auth application-default login --impersonate-service-account=\${SA_EMAIL}`;
+
+  const cloudRunDeployCmd = `# Deploy to Cloud Run with Dedicated Service Identity
+# Production uses Application Default Credentials (ADC) — NO private key JSON file needed
+gcloud run deploy cinepilot-backend \\
   --source . \\
   --platform managed \\
   --region us-central1 \\
   --allow-unauthenticated \\
+  --service-account="cinepilot-backend-sa@\${PROJECT_ID}.iam.gserviceaccount.com" \\
   --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest" \\
   --set-env-vars="NODE_ENV=production,PROJECT_ID=project-aurora-001" \\
   --labels="dev-tutorial=cloud-run-ai-challenge"`;
@@ -78,23 +95,43 @@ service cloud.firestore {
         </div>
       </div>
 
-      {/* Secret Manager Section */}
+      {/* Service Account Setup Section */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-amber-400" />
-            <h3 className="font-bold text-white text-sm">1. Secret Manager IAM Bindings (Zero Hardcoding)</h3>
+            <h3 className="font-bold text-white text-sm">1. Dedicated User-Managed Service Account & Secret Manager (PoLP)</h3>
           </div>
           <button
-            onClick={() => copyCode(secretManagerCmd, 'secret')}
+            onClick={() => copyCode(serviceAccountSetupCmd, 'sa')}
             className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 transition-colors"
           >
-            {copiedId === 'secret' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-            <span>{copiedId === 'secret' ? 'Copied' : 'Copy'}</span>
+            {copiedId === 'sa' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+            <span>{copiedId === 'sa' ? 'Copied' : 'Copy'}</span>
           </button>
         </div>
         <pre className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-emerald-400 font-mono overflow-x-auto">
-          {secretManagerCmd}
+          {serviceAccountSetupCmd}
+        </pre>
+      </div>
+
+      {/* Local Impersonation Section */}
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Terminal className="h-4 w-4 text-emerald-400" />
+            <h3 className="font-bold text-white text-sm">2. Local Development: ADC & Service-Account Impersonation (Zero JSON Keys)</h3>
+          </div>
+          <button
+            onClick={() => copyCode(localImpersonationCmd, 'local')}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 transition-colors"
+          >
+            {copiedId === 'local' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+            <span>{copiedId === 'local' ? 'Copied' : 'Copy'}</span>
+          </button>
+        </div>
+        <pre className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-emerald-300 font-mono overflow-x-auto">
+          {localImpersonationCmd}
         </pre>
       </div>
 
@@ -103,7 +140,7 @@ service cloud.firestore {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cloud className="h-4 w-4 text-cyan-400" />
-            <h3 className="font-bold text-white text-sm">2. Cloud Run Deployment Command</h3>
+            <h3 className="font-bold text-white text-sm">3. Cloud Run Deployment Command (Service Identity via ADC)</h3>
           </div>
           <button
             onClick={() => copyCode(cloudRunDeployCmd, 'cloudrun')}

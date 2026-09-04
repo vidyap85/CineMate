@@ -112,7 +112,7 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-serif tracking-[0.2em] text-[#F5F2ED] uppercase">CineGemini</span>
+              <span className="text-lg font-serif tracking-[0.2em] text-[#F5F2ED] uppercase">CineMate</span>
               <span className="text-[9px] uppercase tracking-[0.2em] font-mono px-1.5 py-0.5 border border-[#C5A059]/40 text-[#C5A059] bg-[#C5A059]/10">
                 STUDIO GATEWAY
               </span>

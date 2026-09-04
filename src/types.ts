@@ -437,7 +437,7 @@ export interface AuditLogItem {
   userName: string;
   userRole: UserRole;
   action: string;
-  resourceType: 'PROJECT' | 'LOCATION' | 'SCENE' | 'REPORT' | 'COST' | 'SET' | 'WEATHER' | 'SLACK' | 'AUTH' | 'PLAN';
+  resourceType: 'PROJECT' | 'LOCATION' | 'SCENE' | 'REPORT' | 'COST' | 'SET' | 'WEATHER' | 'SLACK' | 'AUTH' | 'PLAN' | 'SANDBOX';
   resourceId?: string;
   details: string;
   ipAddress?: string;

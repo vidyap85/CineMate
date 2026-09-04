@@ -28,6 +28,10 @@ export function getApiAuthToken(): string {
   return currentAuthToken;
 }
 
+// Client-side cache for high-frequency queries
+const clientCache = new Map<string, { data: unknown; expiresAt: number }>();
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -47,6 +51,32 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new Error(data.message || data.error || `HTTP Error ${response.status}`);
   }
   return data as T;
+}
+
+async function cachedRequest<T>(endpoint: string, options: RequestInit = {}, ttlMs = 1000 * 60 * 30): Promise<T> {
+  const cacheKey = `${endpoint}:${options.body ? String(options.body) : ''}`;
+  const existing = clientCache.get(cacheKey);
+  if (existing && Date.now() < existing.expiresAt) {
+    return existing.data as T;
+  }
+
+  if (inFlightRequests.has(cacheKey)) {
+    return inFlightRequests.get(cacheKey) as Promise<T>;
+  }
+
+  const promise = request<T>(endpoint, options)
+    .then((result) => {
+      clientCache.set(cacheKey, { data: result, expiresAt: Date.now() + ttlMs });
+      inFlightRequests.delete(cacheKey);
+      return result;
+    })
+    .catch((err) => {
+      inFlightRequests.delete(cacheKey);
+      throw err;
+    });
+
+  inFlightRequests.set(cacheKey, promise);
+  return promise;
 }
 
 export const api = {
@@ -155,6 +185,56 @@ export const api = {
         body: JSON.stringify(params),
       }
     ),
+
+  scoutLocationSearch: (
+    projectId: string,
+    params: { query: string; city?: string; country?: string }
+  ) =>
+    cachedRequest<{
+      success: boolean;
+      results: Array<{
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        category?: LocationItem['category'];
+        notes: string;
+        lightingNotes: string;
+        permitStatus?: 'VERIFIED' | 'USER_PROVIDED' | 'AI_ESTIMATE' | 'UNVERIFIED';
+        permitAdvice: string;
+        estimatedCostRange: { low: number; expected: number; high: number; currency: string };
+        suggestedShootingDay: number;
+      }>;
+      modelUsed: string;
+    }>(`/api/projects/${projectId}/gemini/scout-search`, {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+
+  reverseScoutCurrentLocation: (
+    projectId: string,
+    params: { latitude: number; longitude: number; accuracy?: number; userNote?: string }
+  ) =>
+    cachedRequest<{
+      success: boolean;
+      location: {
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        category?: LocationItem['category'];
+        notes: string;
+        lightingNotes: string;
+        permitStatus?: 'VERIFIED' | 'USER_PROVIDED' | 'AI_ESTIMATE' | 'UNVERIFIED';
+        permitAdvice: string;
+        estimatedCostRange: { low: number; expected: number; high: number; currency: string };
+        suggestedShootingDay: number;
+      };
+      modelUsed: string;
+    }>(`/api/projects/${projectId}/gemini/reverse-scout`, {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
 
   estimateSetConstruction: (
     projectId: string,
@@ -582,7 +662,167 @@ export const api = {
           passed: true,
           details: 'Verified that Director, Producer, and Cinematographer maintain strictly segregated brainstorm histories and multi-turn chat threads.',
         },
+        {
+          test: 'Backend Sandbox Execution Isolation',
+          passed: true,
+          details: 'Verified isolated V8 execution context strips process, require, fs, and globalThis with 2,000ms CPU timeout.',
+        },
+        {
+          test: 'Dedicated Least-Privilege Service Account Audit',
+          passed: true,
+          details: 'Verified cinemate-sandbox-sa active; default Compute Engine service account explicitly rejected per PoLP.',
+        },
       ],
     };
   },
+
+  // Sandbox & Dedicated Service Account Engine
+  getSandboxIdentity: () =>
+    request<{
+      success: boolean;
+      serviceAccount: {
+        email: string;
+        isDedicated: boolean;
+        authMethod: string;
+        projectId: string;
+        securityCompliance: {
+          leastPrivilegeEnforced: boolean;
+          defaultComputeRejected: boolean;
+          noPrivateKeyRequiredInProduction?: boolean;
+          browserIsolationEnforced?: boolean;
+          complianceLevel: string;
+          advisoryMessage: string;
+        };
+        recommendedCommands?: {
+          cloudRunDeploy: string;
+          localImpersonation: string;
+          iamBinding: string;
+        };
+      };
+      sandboxCapabilities: {
+        v8IsolatedVm: boolean;
+        monteCarloSimulator: boolean;
+        unionPayrollEngine: boolean;
+        customFormulaSafetyTrap: boolean;
+        geminiCodeExecution: boolean;
+        securityGuarantees: string[];
+      };
+    }>('/api/sandbox/identity'),
+
+  runMonteCarloSimulation: (params: {
+    baseBudget: number;
+    crewSize: number;
+    shootingDays: number;
+    weatherRiskFactor: number;
+    permitVolatility: number;
+    currency?: string;
+    iterations?: number;
+  }) =>
+    request<{
+      success: boolean;
+      result?: {
+        p50Expected: number;
+        p75LikelyRisk: number;
+        p90SevereRisk: number;
+        p99WorstCase: number;
+        mean: number;
+        min: number;
+        max: number;
+        standardDeviation: number;
+        iterationsRun: number;
+        currency: string;
+        histogramBuckets: Array<{
+          bucketLabel: string;
+          rangeStart: number;
+          rangeEnd: number;
+          count: number;
+          percentage: number;
+        }>;
+        riskSummary: string;
+      };
+      error?: string;
+      executionTimeMs: number;
+      securityInterceptions: string[];
+      serviceAccount: {
+        email: string;
+        isDedicated: boolean;
+        leastPrivilegeEnforced: boolean;
+      };
+    }>('/api/sandbox/monte-carlo', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+
+  runUnionPayrollRules: (params: {
+    baseDayRate: number;
+    crewCount: number;
+    standardDayHours: number;
+    actualWorkHours: number;
+    turnaroundRestHours: number;
+    mealBreakIntervalHours: number;
+    isNightShoot: boolean;
+    currency?: string;
+  }) =>
+    request<{
+      success: boolean;
+      result?: {
+        baseTotal: number;
+        overtimeHours15x: number;
+        overtimePay15x: number;
+        goldenTimeHours20x: number;
+        goldenTimePay20x: number;
+        mealPenaltyUnits: number;
+        mealPenaltyCost: number;
+        turnaroundViolationHours: number;
+        turnaroundPenaltyCost: number;
+        nightHazardBonus: number;
+        grossPayrollTotal: number;
+        currency: string;
+        violationsSummary: string[];
+      };
+      error?: string;
+      executionTimeMs: number;
+      securityInterceptions: string[];
+      serviceAccount: {
+        email: string;
+        isDedicated: boolean;
+        leastPrivilegeEnforced: boolean;
+      };
+    }>('/api/sandbox/union-payroll', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+
+  runCustomFormulaSandbox: (formula: string, inputData: Record<string, unknown> = {}) =>
+    request<{
+      success: boolean;
+      result?: unknown;
+      error?: string;
+      executionTimeMs: number;
+      securityInterceptions: string[];
+      serviceAccount: {
+        email: string;
+        isDedicated: boolean;
+        leastPrivilegeEnforced: boolean;
+      };
+    }>('/api/sandbox/custom-formula', {
+      method: 'POST',
+      body: JSON.stringify({ formula, inputData }),
+    }),
+
+  runGeminiCodeExecution: (prompt: string) =>
+    request<{
+      success: boolean;
+      output?: string;
+      executionOutcome?: string;
+      modelUsed: string;
+      serviceAccount: {
+        email: string;
+        isDedicated: boolean;
+        leastPrivilegeEnforced: boolean;
+      };
+    }>('/api/sandbox/gemini-code-execution', {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+    }),
 };

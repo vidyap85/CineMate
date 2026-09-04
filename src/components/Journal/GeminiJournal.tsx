@@ -144,7 +144,7 @@ export const GeminiJournal: React.FC = () => {
 
   const handleExportTranscript = () => {
     if (!selectedEntry) return;
-    let transcript = `CINEGEMINI JOURNAL - ROLE: ${userRole}\n`;
+    let transcript = `CINEMATE JOURNAL - ROLE: ${userRole}\n`;
     transcript += `Topic: ${selectedEntry.title}\n`;
     transcript += `Author: ${currentUser?.name || userRole} (${currentUser?.email})\n`;
     transcript += `Date: ${new Date(selectedEntry.createdAt).toLocaleString()}\n`;
@@ -159,7 +159,7 @@ export const GeminiJournal: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cinegemini-journal-${userRole.toLowerCase()}-${selectedEntry.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    a.download = `cinemate-journal-${userRole.toLowerCase()}-${selectedEntry.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };

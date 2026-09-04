@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { MapPin, Navigation, Compass, Layers, Plus, ExternalLink, Sun, DollarSign, ShieldCheck } from 'lucide-react';
 import type { LocationItem } from '../../types';
 import { calculateClientSolarTimes } from '../../lib/sunCalc';
+import { CurrentLocationModal } from './CurrentLocationModal';
 
 interface LocationMapProps {
   locations: LocationItem[];
   onSelectLocation: (loc: LocationItem) => void;
   onAddNewLocation: () => void;
+  onSaveLocation?: (loc: Partial<LocationItem>) => Promise<void>;
   selectedLocationId?: string;
 }
 
@@ -14,9 +16,11 @@ export const LocationMap: React.FC<LocationMapProps> = ({
   locations,
   onSelectLocation,
   onAddNewLocation,
+  onSaveLocation,
   selectedLocationId,
 }) => {
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
+  const [isCurrentLocModalOpen, setIsCurrentLocModalOpen] = useState(false);
   const [selectedLoc, setSelectedLoc] = useState<LocationItem>(
     locations.find((l) => l.locationId === selectedLocationId) || locations[0] || ({} as LocationItem)
   );
@@ -63,6 +67,16 @@ export const LocationMap: React.FC<LocationMapProps> = ({
               Satellite
             </button>
           </div>
+
+          <button
+            onClick={() => setIsCurrentLocModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#C5A059]/15 hover:bg-[#C5A059]/25 text-[#C5A059] border border-[#C5A059]/40 font-bold text-xs uppercase tracking-wider transition-all shrink-0 cursor-pointer shadow-sm"
+            id="map-pin-current-spot-btn"
+            title="Detect GPS coordinates and pin your current spot"
+          >
+            <Navigation className="h-3.5 w-3.5" />
+            <span>Pin Current Spot</span>
+          </button>
 
           <button
             onClick={onAddNewLocation}
@@ -251,6 +265,19 @@ export const LocationMap: React.FC<LocationMapProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Current GPS Location Modal */}
+      <CurrentLocationModal
+        isOpen={isCurrentLocModalOpen}
+        onClose={() => setIsCurrentLocModalOpen(false)}
+        onSaveLocation={async (loc) => {
+          if (onSaveLocation) {
+            await onSaveLocation(loc);
+          } else {
+            onAddNewLocation();
+          }
+        }}
+      />
     </div>
   );
 };

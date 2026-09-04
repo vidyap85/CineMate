@@ -9,6 +9,7 @@ import { weatherRouter } from './server/routes/weatherRoutes.js';
 import { slackRouter } from './server/routes/slackRoutes.js';
 import { observabilityRouter } from './server/routes/observabilityRoutes.js';
 import { threatModelRouter } from './server/routes/threatModelRoutes.js';
+import { sandboxRouter } from './server/routes/sandboxRoutes.js';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ async function startServer() {
   app.use('/api/projects', slackRouter);
   app.use('/api/observability', observabilityRouter);
   app.use('/api/threat-model', threatModelRouter);
+  app.use('/api/sandbox', sandboxRouter);
 
   // 4. Vite Middleware for Development / Static serving for Production
   if (process.env.NODE_ENV !== 'production') {
