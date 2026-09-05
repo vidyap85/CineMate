@@ -20,8 +20,14 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 
-export const SandboxCalculatorView: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'monte_carlo' | 'union_rules' | 'formula_lab' | 'gemini_python'>('monte_carlo');
+export interface SandboxCalculatorViewProps {
+  producerMode?: boolean;
+}
+
+export const SandboxCalculatorView: React.FC<SandboxCalculatorViewProps> = ({ producerMode = false }) => {
+  const [activeSubTab, setActiveSubTab] = useState<'monte_carlo' | 'union_rules' | 'formula_lab' | 'gemini_python'>(
+    producerMode ? 'monte_carlo' : 'formula_lab'
+  );
 
   // Service Account Identity State
   const [saIdentity, setSaIdentity] = useState<{
@@ -78,8 +84,10 @@ export const SandboxCalculatorView: React.FC = () => {
   const [pythonResult, setPythonResult] = useState<any>(null);
 
   useEffect(() => {
-    loadIdentity();
-  }, []);
+    if (!producerMode) {
+      loadIdentity();
+    }
+  }, [producerMode]);
 
   const loadIdentity = async () => {
     try {
@@ -170,136 +178,158 @@ export const SandboxCalculatorView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header & Service Account Least-Privilege Badge */}
-      <div className="border border-white/10 bg-[#0B0B0B] p-6 space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-[#C5A059]" />
-              <h2 className="text-xl font-serif text-[#F5F2ED] tracking-tight">
-                Backend Calculation Sandbox & Dedicated Service Account
-              </h2>
-            </div>
-            <p className="text-xs uppercase tracking-widest text-white/40 mt-1 font-mono">
-              Dedicated Service Account (cinepilot-backend-sa) • Application Default Credentials (ADC) • Hardened V8 VM
-            </p>
-          </div>
-
-          {/* Service Account Security Chip */}
-          <div className="flex items-center gap-2.5 bg-black/60 border border-emerald-500/30 px-3.5 py-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <div className="text-left">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold">
-                  User-Managed Service Account Active (PoLP)
-                </span>
-              </div>
-              <p className="text-[11px] font-mono text-white/90 font-medium">
-                {saIdentity?.email || 'cinepilot-backend-sa@cinegemini-prod.iam.gserviceaccount.com'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Security Compliance Banner */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3 border-t border-white/5 text-xs font-mono">
-          <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-white/90 font-bold block text-[11px]">Least-Privilege IAM (PoLP)</span>
-              <span className="text-white/50 text-[10px]">
-                Dedicated user-managed account; default compute (<code className="text-white/70">*-compute@</code>) rejected
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
-            <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-white/90 font-bold block text-[11px]">No Private Key in Production</span>
-              <span className="text-white/50 text-[10px]">
-                Cloud Run Service Identity via Application Default Credentials (ADC); zero downloaded JSON files
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
-            <Lock className="h-4 w-4 text-[#C5A059] shrink-0 mt-0.5" />
-            <div>
-              <span className="text-white/90 font-bold block text-[11px]">Zero Browser Exposure</span>
-              <span className="text-white/50 text-[10px]">
-                Credentials & tokens resolve strictly server-side; never exposed to browser context
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
-            <Zap className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-white/90 font-bold block text-[11px]">Local Impersonation Ready</span>
-              <span className="text-white/50 text-[10px]">
-                Developers use <code className="text-white/70">--impersonate-service-account</code> without storing keys locally
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Deployment & Impersonation Runbook Drawer */}
-        <div className="p-3 bg-black/40 border border-white/10 rounded-sm text-xs font-mono space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[#C5A059] font-bold text-[11px] uppercase tracking-wider">
-              <Terminal className="h-3.5 w-3.5" />
-              <span>Production Deployment & Local ADC Impersonation Protocol</span>
-            </div>
-            <span className="text-[10px] text-white/40 font-normal">
-              Method: {saIdentity?.authMethod || 'APPLICATION_DEFAULT_CREDENTIALS'}
+      {/* Header Banner */}
+      {producerMode ? (
+        <div className="border border-white/10 bg-gradient-to-r from-[#12100B] via-[#0E0E0E] to-[#0A0A0A] p-6 space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1 bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/30 text-[10px] font-mono uppercase tracking-[0.2em]">
+              PRODUCER FINANCIAL INTELLIGENCE
             </span>
+            <span className="text-[11px] uppercase tracking-widest text-white/40">Elena Rostova • Line Producer</span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
-            <div className="bg-black/80 border border-white/10 p-2.5 rounded space-y-1">
-              <span className="text-cyan-300 font-bold block text-[10px] uppercase tracking-wider">
-                1. Cloud Run Deploy with Service Identity (ADC - No JSON Keys)
-              </span>
-              <code className="text-white/70 text-[10px] block break-all selection:bg-cyan-900">
-                gcloud run deploy cinepilot-backend \<br />
-                &nbsp;&nbsp;--service-account="{saIdentity?.email || 'cinepilot-backend-sa@PROJECT_ID.iam.gserviceaccount.com'}" \<br />
-                &nbsp;&nbsp;--set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest"
-              </code>
-            </div>
-
-            <div className="bg-black/80 border border-white/10 p-2.5 rounded space-y-1">
-              <span className="text-emerald-300 font-bold block text-[10px] uppercase tracking-wider">
-                2. Local Dev: ADC Service-Account Impersonation
-              </span>
-              <code className="text-white/70 text-[10px] block break-all selection:bg-emerald-900">
-                gcloud auth application-default login \<br />
-                &nbsp;&nbsp;--impersonate-service-account="{saIdentity?.email || 'cinepilot-backend-sa@PROJECT_ID.iam.gserviceaccount.com'}"
-              </code>
-            </div>
-          </div>
-
-          <p className="text-[10px] text-white/40 italic">
-            * Security Mandate: Only use a service-account JSON private key if a specific legacy deployment environment cannot support ADC or Workload Identity.
+          <h1 className="text-2xl lg:text-3xl font-serif font-light italic text-[#F5F2ED] tracking-tight">
+            Monte Carlo Budget Risk & Union Payroll Engine
+          </h1>
+          <p className="text-xs text-white/60 leading-relaxed max-w-2xl font-light tracking-wide">
+            Run sandboxed 1,000-iteration Monte Carlo variance trials to quantify contingency reserves and financial overrun probabilities, and evaluate deterministic union turnaround rest penalties and golden hour overtime tiers.
           </p>
         </div>
-      </div>
+      ) : (
+        /* Admin Service Account & PoLP Header */
+        <div className="border border-white/10 bg-[#0B0B0B] p-6 space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Cpu className="h-5 w-5 text-[#C5A059]" />
+                <h2 className="text-xl font-serif text-[#F5F2ED] tracking-tight">
+                  Backend Calculation Sandbox & Dedicated Service Account
+                </h2>
+              </div>
+              <p className="text-xs uppercase tracking-widest text-white/40 mt-1 font-mono">
+                Dedicated Service Account (cinepilot-backend-sa) • Application Default Credentials (ADC) • Hardened V8 VM
+              </p>
+            </div>
+
+            {/* Service Account Security Chip */}
+            <div className="flex items-center gap-2.5 bg-black/60 border border-emerald-500/30 px-3.5 py-2">
+              <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold">
+                    User-Managed Service Account Active (PoLP)
+                  </span>
+                </div>
+                <p className="text-[11px] font-mono text-white/90 font-medium">
+                  {saIdentity?.email || 'cinepilot-backend-sa@cinegemini-prod.iam.gserviceaccount.com'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Security Compliance Banner */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3 border-t border-white/5 text-xs font-mono">
+            <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-white/90 font-bold block text-[11px]">Least-Privilege IAM (PoLP)</span>
+                <span className="text-white/50 text-[10px]">
+                  Dedicated user-managed account; default compute (<code className="text-white/70">*-compute@</code>) rejected
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
+              <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-white/90 font-bold block text-[11px]">No Private Key in Production</span>
+                <span className="text-white/50 text-[10px]">
+                  Cloud Run Service Identity via Application Default Credentials (ADC); zero downloaded JSON files
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
+              <Lock className="h-4 w-4 text-[#C5A059] shrink-0 mt-0.5" />
+              <div>
+                <span className="text-white/90 font-bold block text-[11px]">Zero Browser Exposure</span>
+                <span className="text-white/50 text-[10px]">
+                  Credentials & tokens resolve strictly server-side; never exposed to browser context
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-white/[0.02] p-2.5 border border-white/5">
+              <Zap className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-white/90 font-bold block text-[11px]">Local Impersonation Ready</span>
+                <span className="text-white/50 text-[10px]">
+                  Developers use <code className="text-white/70">--impersonate-service-account</code> without storing keys locally
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Deployment & Impersonation Runbook Drawer */}
+          <div className="p-3 bg-black/40 border border-white/10 rounded-sm text-xs font-mono space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#C5A059] font-bold text-[11px] uppercase tracking-wider">
+                <Terminal className="h-3.5 w-3.5" />
+                <span>Production Deployment & Local ADC Impersonation Protocol</span>
+              </div>
+              <span className="text-[10px] text-white/40 font-normal">
+                Method: {saIdentity?.authMethod || 'APPLICATION_DEFAULT_CREDENTIALS'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+              <div className="bg-black/80 border border-white/10 p-2.5 rounded space-y-1">
+                <span className="text-cyan-300 font-bold block text-[10px] uppercase tracking-wider">
+                  1. Cloud Run Deploy with Service Identity (ADC - No JSON Keys)
+                </span>
+                <code className="text-white/70 text-[10px] block break-all selection:bg-cyan-900">
+                  gcloud run deploy cinepilot-backend \<br />
+                  &nbsp;&nbsp;--service-account="{saIdentity?.email || 'cinepilot-backend-sa@PROJECT_ID.iam.gserviceaccount.com'}" \<br />
+                  &nbsp;&nbsp;--set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest"
+                </code>
+              </div>
+
+              <div className="bg-black/80 border border-white/10 p-2.5 rounded space-y-1">
+                <span className="text-emerald-300 font-bold block text-[10px] uppercase tracking-wider">
+                  2. Local Dev: ADC Service-Account Impersonation
+                </span>
+                <code className="text-white/70 text-[10px] block break-all selection:bg-emerald-900">
+                  gcloud auth application-default login \<br />
+                  &nbsp;&nbsp;--impersonate-service-account="{saIdentity?.email || 'cinepilot-backend-sa@PROJECT_ID.iam.gserviceaccount.com'}"
+                </code>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-white/40 italic">
+              * Security Mandate: Only use a service-account JSON private key if a specific legacy deployment environment cannot support ADC or Workload Identity.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Sub-Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-white/10 pb-2 overflow-x-auto">
-        {[
-          { id: 'monte_carlo', label: '1. Monte Carlo Budget Risk (1,000 Runs)', icon: BarChart3 },
-          { id: 'union_rules', label: '2. Union & Turnaround Payroll Rules', icon: Users },
-          { id: 'formula_lab', label: '3. Adversarial Sandbox & Custom Formulas', icon: Terminal },
-          { id: 'gemini_python', label: '4. Gemini Python Container Sandbox', icon: Sparkles },
-        ].map((tab) => {
+        {(producerMode
+          ? [
+              { id: 'monte_carlo' as const, label: '1. Monte Carlo Budget Risk (1,000 Runs)', icon: BarChart3 },
+              { id: 'union_rules' as const, label: '2. Union & Turnaround Payroll Rules', icon: Users },
+            ]
+          : [
+              { id: 'formula_lab' as const, label: '1. Adversarial Sandbox & Custom Formulas', icon: Terminal },
+              { id: 'gemini_python' as const, label: '2. Gemini Python Container Sandbox', icon: Sparkles },
+            ]
+        ).map((tab) => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveSubTab(tab.id as any)}
+              onClick={() => setActiveSubTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
                 isActive
                   ? 'bg-[#C5A059] text-black font-bold shadow-md'
@@ -314,7 +344,7 @@ export const SandboxCalculatorView: React.FC = () => {
       </div>
 
       {/* TAB 1: MONTE CARLO BUDGET RISK */}
-      {activeSubTab === 'monte_carlo' && (
+      {activeSubTab === 'monte_carlo' && producerMode && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Controls */}
           <div className="bg-[#0B0B0B] border border-white/10 p-5 space-y-4">
@@ -444,7 +474,11 @@ export const SandboxCalculatorView: React.FC = () => {
                     <span>{mcResult.iterationsRun} Trials Executed in {mcResult.executionTimeMs}ms</span>
                   </div>
                   <span className="text-white/50 text-[11px]">
-                    Service Account: <code className="text-[#C5A059]">{mcResult.sa?.email || 'cinemate-sandbox-sa'}</code>
+                    {producerMode ? (
+                      <span>Engine: <code className="text-[#C5A059]">Isolated V8 VM Sandbox</code></span>
+                    ) : (
+                      <span>Service Account: <code className="text-[#C5A059]">{mcResult.sa?.email || 'cinemate-sandbox-sa'}</code></span>
+                    )}
                   </span>
                 </div>
 
@@ -526,7 +560,7 @@ export const SandboxCalculatorView: React.FC = () => {
       )}
 
       {/* TAB 2: UNION OVERTIME RULES */}
-      {activeSubTab === 'union_rules' && (
+      {activeSubTab === 'union_rules' && producerMode && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Inputs */}
           <div className="bg-[#0B0B0B] border border-white/10 p-5 space-y-4">
@@ -663,7 +697,11 @@ export const SandboxCalculatorView: React.FC = () => {
                     <span>Evaluated in {unionResult.executionTimeMs}ms via V8 Sandbox</span>
                   </div>
                   <span className="text-white/50 text-[11px]">
-                    Service Account: <code className="text-[#C5A059]">{unionResult.sa?.email || 'cinemate-sandbox-sa'}</code>
+                    {producerMode ? (
+                      <span>Engine: <code className="text-[#C5A059]">Isolated V8 VM Sandbox</code></span>
+                    ) : (
+                      <span>Service Account: <code className="text-[#C5A059]">{unionResult.sa?.email || 'cinemate-sandbox-sa'}</code></span>
+                    )}
                   </span>
                 </div>
 

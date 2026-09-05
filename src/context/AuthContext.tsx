@@ -45,6 +45,15 @@ const PRESET_USERS: Record<UserRole, UserProfile> = {
     projectIds: ['project-aurora-001'],
     permissions: ['analyze_weather', 'calculate_solar', 'cinematic_advisor', 'add_lighting_notes'],
   },
+  ADMIN: {
+    uid: 'user-admin-001',
+    email: 'security.admin@cinegemini.io',
+    name: 'Sarah Chen (Security & Ops)',
+    role: 'ADMIN',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80',
+    projectIds: ['project-aurora-001', 'project-nebula-002'],
+    permissions: ['manage_sandbox', 'audit_security', 'view_metrics', 'manage_service_account', 'threat_model_access'],
+  },
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -149,6 +158,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       avatar: PRESET_USERS.CINEMATOGRAPHER.avatar!,
       description: 'Optics, lens packages, Golden/Blue hour solar ephemeris, camera movements, and natural/artificial lighting setup.',
       permissions: ['Solar Ephemeris Calculator', 'Weather Risk Modeling', 'Lens & Camera Advisor', 'Lighting Notes'],
+    },
+    {
+      role: 'ADMIN' as UserRole,
+      label: 'Security & Cloud Ops Administrator',
+      email: 'security.admin@cinegemini.io',
+      name: 'Sarah Chen',
+      avatar: PRESET_USERS.ADMIN.avatar!,
+      description: 'Production infrastructure, dedicated Service Account PoLP management, hardened V8 calculation sandbox, threat model auditing, and SLO observability.',
+      permissions: ['V8 Calculation Sandbox', 'Service Account & IAM', '5-Zone Threat Matrix', 'Cloud Run & ADC Runbooks', 'SLO & Security Audit Logs'],
     },
   ];
 

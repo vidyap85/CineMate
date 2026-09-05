@@ -56,7 +56,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
         uid,
         email: parts[2] || `${role.toLowerCase()}@cinegemini.io`,
         name: parts[3] || `${role} Lead`,
-        role: (['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER'].includes(role) ? role : 'DIRECTOR') as UserRole,
+        role: (['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER', 'ADMIN'].includes(role) ? role : 'DIRECTOR') as UserRole,
         projectIds: ['project-aurora-001', 'project-nebula-002'],
       };
     } else {

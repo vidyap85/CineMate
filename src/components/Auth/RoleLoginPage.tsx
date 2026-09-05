@@ -17,6 +17,8 @@ import {
   Layers,
   FileCheck,
   Send,
+  Cpu,
+  Activity,
 } from 'lucide-react';
 import type { UserRole } from '../../types';
 
@@ -97,6 +99,23 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
           defaultEmail: 'cinematographer@cinegemini.io',
           holderName: 'Marcus Thorne (Director of Photography)',
         };
+      case 'ADMIN':
+        return {
+          title: 'Admin & Security Portal',
+          subtitle: 'Dedicated SA, V8 Sandbox & Cloud Audit Suite',
+          badge: 'SECURITY & OPS LEAD',
+          icon: ShieldCheck,
+          accentColor: '#F43F5E',
+          bgAccent: 'rgba(244, 63, 94, 0.08)',
+          borderAccent: 'border-rose-500/40',
+          features: [
+            { icon: Cpu, title: 'Hardened V8 Sandbox Engine', desc: 'Execute Monte Carlo simulations and custom formulas with 2000ms CPU timeout.' },
+            { icon: ShieldCheck, title: 'Service Account & PoLP Enforcer', desc: 'Manage cinepilot-backend-sa, ADC without private keys, and reject compute defaults.' },
+            { icon: Activity, title: '5-Zone Threat Model & Audit Logs', desc: 'Audit OWASP LLM mitigations, SLO metrics, and Cloud Run security deployment runbooks.' },
+          ],
+          defaultEmail: 'security.admin@cinegemini.io',
+          holderName: 'Sarah Chen (Security & Cloud Ops Admin)',
+        };
     }
   };
 
@@ -156,8 +175,8 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
           /* ================= INDIVIDUAL ROLE LOGIN VIEW ================= */
           <div className="w-full max-w-4xl bg-[#0D0D0D] border border-white/10 shadow-2xl overflow-hidden">
             {/* Role Switcher Tabs */}
-            <div className="grid grid-cols-3 border-b border-white/10 bg-[#0A0A0A]">
-              {(['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER'] as UserRole[]).map((role) => {
+            <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-white/10 bg-[#0A0A0A]">
+              {(['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER', 'ADMIN'] as UserRole[]).map((role) => {
                 const meta = getRoleMetadata(role);
                 const isActive = activeRoleTab === role;
                 const RoleIcon = meta.icon;
@@ -351,8 +370,8 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {(['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER'] as UserRole[]).map((role) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {(['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER', 'ADMIN'] as UserRole[]).map((role) => {
                 const meta = getRoleMetadata(role);
                 const roleData = availableRoles.find((r) => r.role === role)!;
                 const RoleIcon = meta.icon;

@@ -22,12 +22,14 @@ import { AuditLogsView } from './components/Security/AuditLogsView';
 import { TestWalkthroughView } from './components/Testing/TestWalkthroughView';
 import { DeploymentGuideView } from './components/Deployment/DeploymentGuideView';
 import { RoleLoginPage } from './components/Auth/RoleLoginPage';
+import { ShieldAlert, LogOut, Film } from 'lucide-react';
 import { api } from './lib/api';
 import { INITIAL_PROJECT, INITIAL_LOCATIONS, INITIAL_SCENES, INITIAL_SHOOT_DAYS } from './data/initialData';
 import type { FilmProject, LocationItem, SceneItem, ShootDayItem, LocationReport } from './types';
 
 function CineMateMain() {
   const { currentUser, userRole, isAuthenticated } = useAuth();
+  const isAdmin = userRole === 'ADMIN';
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [project, setProject] = useState<FilmProject>(INITIAL_PROJECT);
   const [locations, setLocations] = useState<LocationItem[]>(INITIAL_LOCATIONS);
@@ -39,7 +41,7 @@ function CineMateMain() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Partial<LocationItem> | null>(null);
-  const [isCostTabSubmode, setIsCostTabSubmode] = useState<'locations' | 'sets' | 'sandbox'>('locations');
+  const [isCostTabSubmode, setIsCostTabSubmode] = useState<'locations' | 'sets' | 'budget_risk'>('locations');
   const [activeReport, setActiveReport] = useState<LocationReport | null>(null);
 
   useEffect(() => {
@@ -126,24 +128,6 @@ function CineMateMain() {
 
         {/* Dynamic View Canvas */}
         <main className="flex-1 overflow-y-auto p-6 sm:p-8 lg:p-10 max-w-7xl w-full mx-auto space-y-8">
-          {activeTab === 'role_portals' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <div>
-                  <h1 className="text-2xl font-serif text-[#F5F2ED]">Role Login Portals</h1>
-                  <p className="text-xs text-white/50">Dedicated authentication gateways for Director, Producer, and Cinematographer.</p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('dashboard')}
-                  className="px-4 py-2 bg-[#C5A059] text-black font-semibold text-xs uppercase tracking-wider"
-                >
-                  Return to Dashboard
-                </button>
-              </div>
-              <RoleLoginPage onLoginSuccess={() => setActiveTab('dashboard')} />
-            </div>
-          )}
-
           {activeTab === 'dashboard' && (
             <DashboardHome
               project={project}
@@ -157,141 +141,278 @@ function CineMateMain() {
           )}
 
           {(activeTab === 'scout_map' || activeTab === 'map') && (
-            <LocationMap
-              locations={locations}
-              onSelectLocation={(loc) => {
-                setEditingLocation(loc);
-                setIsLocationModalOpen(true);
-              }}
-              onAddNewLocation={() => {
-                setEditingLocation(null);
-                setIsLocationModalOpen(true);
-              }}
-              onSaveLocation={handleSaveLocation}
-            />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Location Scout & Map"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <LocationMap
+                locations={locations}
+                onSelectLocation={(loc) => {
+                  setEditingLocation(loc);
+                  setIsLocationModalOpen(true);
+                }}
+                onAddNewLocation={() => {
+                  setEditingLocation(null);
+                  setIsLocationModalOpen(true);
+                }}
+                onSaveLocation={handleSaveLocation}
+              />
+            )
           )}
 
           {activeTab === 'locations' && (
-            <LocationList
-              locations={locations}
-              onSelectLocation={(loc) => {
-                setEditingLocation(loc);
-                setIsLocationModalOpen(true);
-              }}
-              onAddNewLocation={(prefill) => {
-                setEditingLocation(prefill || null);
-                setIsLocationModalOpen(true);
-              }}
-              onSaveLocation={handleSaveLocation}
-              onDeleteLocation={handleDeleteLocation}
-            />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Location Scout & Grid"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <LocationList
+                locations={locations}
+                onSelectLocation={(loc) => {
+                  setEditingLocation(loc);
+                  setIsLocationModalOpen(true);
+                }}
+                onAddNewLocation={(prefill) => {
+                  setEditingLocation(prefill || null);
+                  setIsLocationModalOpen(true);
+                }}
+                onSaveLocation={handleSaveLocation}
+                onDeleteLocation={handleDeleteLocation}
+              />
+            )
           )}
 
           {activeTab === 'scenes' && (
-            <SceneManager
-              scenes={scenes}
-              locations={locations}
-              shootDays={shootDays}
-              onOpenNoteModal={() => setIsNoteModalOpen(true)}
-              onAddNewScene={() => setIsNoteModalOpen(true)}
-              onEditScene={(scene) => {
-                setIsNoteModalOpen(true);
-              }}
-            />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Scenes & Breakdown"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <SceneManager
+                scenes={scenes}
+                locations={locations}
+                shootDays={shootDays}
+                onOpenNoteModal={() => setIsNoteModalOpen(true)}
+                onAddNewScene={() => setIsNoteModalOpen(true)}
+                onEditScene={(scene) => {
+                  setIsNoteModalOpen(true);
+                }}
+              />
+            )
           )}
 
           {(activeTab === 'master_report' || activeTab === 'report') && (
-            <LocationReportView
-              locations={locations}
-              scenes={scenes}
-              shootDays={shootDays}
-              onSendToSlack={(report) => {
-                setActiveReport(report);
-                setActiveTab('slack_dispatch');
-              }}
-            />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Master Shooting Report"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <LocationReportView
+                locations={locations}
+                scenes={scenes}
+                shootDays={shootDays}
+                onSendToSlack={(report) => {
+                  setActiveReport(report);
+                  setActiveTab('slack_dispatch');
+                }}
+              />
+            )
           )}
 
-          {(activeTab === 'cost_planning' || activeTab === 'cost-planning' || activeTab === 'set-estimate' || activeTab === 'sandbox_engine' || activeTab === 'sandbox') && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-4 overflow-x-auto">
-                <button
-                  onClick={() => setIsCostTabSubmode('locations')}
-                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    isCostTabSubmode === 'locations' && activeTab !== 'sandbox_engine' && activeTab !== 'sandbox'
-                      ? 'bg-[#C5A059] text-black font-bold shadow-md'
-                      : 'border border-white/15 text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  Location & Permit Intelligence
-                </button>
-                <button
-                  onClick={() => setIsCostTabSubmode('sets')}
-                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    isCostTabSubmode === 'sets'
-                      ? 'bg-[#C5A059] text-black font-bold shadow-md'
-                      : 'border border-white/15 text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  Set Construction & Art Dept
-                </button>
-                <button
-                  onClick={() => setIsCostTabSubmode('sandbox')}
-                  className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                    isCostTabSubmode === 'sandbox' || activeTab === 'sandbox_engine' || activeTab === 'sandbox'
-                      ? 'bg-[#C5A059] text-black font-bold shadow-md'
-                      : 'border border-[#C5A059]/40 text-[#C5A059] hover:bg-[#C5A059]/10'
-                  }`}
-                >
-                  <span>Calculation Sandbox & PoLP SA</span>
-                  <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 font-mono">SA Active</span>
-                </button>
-              </div>
+          {(activeTab === 'cost_planning' || activeTab === 'cost-planning' || activeTab === 'set-estimate') && (
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Cost & Permit Intelligence"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/10 pb-4 overflow-x-auto">
+                  <button
+                    onClick={() => setIsCostTabSubmode('locations')}
+                    className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap ${
+                      isCostTabSubmode === 'locations'
+                        ? 'bg-[#C5A059] text-black font-bold shadow-md'
+                        : 'border border-white/15 text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                    id="tab-cost-locations-btn"
+                  >
+                    Location & Permit Intelligence
+                  </button>
+                  <button
+                    onClick={() => setIsCostTabSubmode('sets')}
+                    className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap ${
+                      isCostTabSubmode === 'sets'
+                        ? 'bg-[#C5A059] text-black font-bold shadow-md'
+                        : 'border border-white/15 text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                    id="tab-cost-sets-btn"
+                  >
+                    Set Construction & Art Dept
+                  </button>
+                  {userRole === 'PRODUCER' && (
+                    <button
+                      onClick={() => setIsCostTabSubmode('budget_risk')}
+                      className={`px-5 py-2 text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer whitespace-nowrap ${
+                        isCostTabSubmode === 'budget_risk'
+                          ? 'bg-[#C5A059] text-black font-bold shadow-md'
+                          : 'border border-white/15 text-white/60 hover:text-white hover:bg-white/5'
+                      }`}
+                      id="tab-cost-budget-risk-btn"
+                    >
+                      Monte Carlo & Union Payroll
+                    </button>
+                  )}
+                </div>
 
-              {activeTab === 'sandbox_engine' || activeTab === 'sandbox' || isCostTabSubmode === 'sandbox' ? (
-                <SandboxCalculatorView />
-              ) : isCostTabSubmode === 'locations' ? (
-                <CostEstimator locations={locations} />
-              ) : (
-                <SetEstimator />
-              )}
-            </div>
+                {isCostTabSubmode === 'locations' ? (
+                  <CostEstimator locations={locations} />
+                ) : isCostTabSubmode === 'sets' ? (
+                  <SetEstimator />
+                ) : (
+                  <SandboxCalculatorView producerMode={true} />
+                )}
+              </div>
+            )
+          )}
+
+          {(activeTab === 'budget_risk' || activeTab === 'monte_carlo' || activeTab === 'union_rules') && (
+            userRole === 'PRODUCER' ? (
+              <SandboxCalculatorView producerMode={true} />
+            ) : (
+              <AdminRestrictedGuard
+                featureName="Monte Carlo Budget Risk & Union Payroll Rules"
+                userRole={userRole}
+              />
+            )
           )}
 
           {(activeTab === 'weather_lighting' || activeTab === 'weather-lighting') && (
-            <WeatherLightingView locations={locations} />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Sun & Lighting Advisor"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <WeatherLightingView locations={locations} />
+            )
           )}
 
           {(activeTab === 'production_scout' || activeTab === 'production-scout') && (
-            <ProductionScoutView
-              locations={locations}
-              scenes={scenes}
-              shootDays={shootDays}
-            />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="AI Production Scout"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <ProductionScoutView
+                locations={locations}
+                scenes={scenes}
+                shootDays={shootDays}
+              />
+            )
           )}
 
           {(activeTab === 'location_swap' || activeTab === 'location-swap') && (
-            <LocationSwapSimulator locations={locations} />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Location Swap Simulator"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <LocationSwapSimulator locations={locations} />
+            )
           )}
 
-          {activeTab === 'journal' && <GeminiJournal />}
+          {activeTab === 'journal' && (
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Gemini Creative Journal"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <GeminiJournal />
+            )
+          )}
 
           {(activeTab === 'slack_dispatch' || activeTab === 'slack') && (
-            <SlackIntegrationView
-              report={activeReport}
-              locations={locations}
-              scenes={scenes}
-              shootDays={shootDays}
-            />
+            isAdmin ? (
+              <DepartmentAccessNotice
+                featureName="Slack Crew Dispatch"
+                onReturnToDashboard={() => setActiveTab('dashboard')}
+              />
+            ) : (
+              <SlackIntegrationView
+                report={activeReport}
+                locations={locations}
+                scenes={scenes}
+                shootDays={shootDays}
+              />
+            )
           )}
 
-          {(activeTab === 'threat_model' || activeTab === 'threat-model') && <ThreatModelView />}
+          {/* Admin & Security Ops Routes (Strictly Role-Guarded) */}
+          {(activeTab === 'sandbox_engine' || activeTab === 'sandbox') && (
+            isAdmin ? (
+              <SandboxCalculatorView />
+            ) : userRole === 'PRODUCER' ? (
+              <SandboxCalculatorView producerMode={true} />
+            ) : (
+              <AdminRestrictedGuard
+                featureName="V8 Calculation Sandbox & Dedicated Service Account Engine"
+                userRole={userRole}
+              />
+            )
+          )}
 
-          {(activeTab === 'audit_logs' || activeTab === 'observability') && <AuditLogsView />}
+          {(activeTab === 'threat_model' || activeTab === 'threat-model') && (
+            isAdmin ? (
+              <ThreatModelView />
+            ) : (
+              <AdminRestrictedGuard
+                featureName="Agentic Threat Modeling Matrix (5 Zones)"
+                userRole={userRole}
+              />
+            )
+          )}
 
-          {(activeTab === 'test_walkthrough' || activeTab === 'testing') && <TestWalkthroughView />}
+          {(activeTab === 'audit_logs' || activeTab === 'observability') && (
+            isAdmin ? (
+              <AuditLogsView />
+            ) : (
+              <AdminRestrictedGuard
+                featureName="Observability Metrics & Security Audit Trail"
+                userRole={userRole}
+              />
+            )
+          )}
 
-          {(activeTab === 'deployment_guide' || activeTab === 'deployment') && <DeploymentGuideView />}
+          {(activeTab === 'test_walkthrough' || activeTab === 'testing') && (
+            isAdmin ? (
+              <TestWalkthroughView />
+            ) : (
+              <AdminRestrictedGuard
+                featureName="Security & Functional Test Suite Walkthrough"
+                userRole={userRole}
+              />
+            )
+          )}
+
+          {(activeTab === 'deployment_guide' || activeTab === 'deployment') && (
+            isAdmin ? (
+              <DeploymentGuideView />
+            ) : (
+              <AdminRestrictedGuard
+                featureName="Cloud Run Deployment & PoLP IAM Runbooks"
+                userRole={userRole}
+              />
+            )
+          )}
         </main>
       </div>
 
@@ -312,6 +433,85 @@ function CineMateMain() {
         onSave={handleSaveLocation}
         initialData={editingLocation}
       />
+    </div>
+  );
+}
+
+function AdminRestrictedGuard({
+  featureName,
+  userRole,
+}: {
+  featureName: string;
+  userRole: string;
+}) {
+  const { logout } = useAuth();
+  return (
+    <div className="p-8 max-w-2xl mx-auto my-12 bg-[#0E0E0E] border border-rose-500/30 text-center space-y-5 rounded-none shadow-2xl">
+      <div className="w-12 h-12 mx-auto rounded-full bg-rose-500/10 border border-rose-500/40 flex items-center justify-center text-rose-400">
+        <ShieldAlert className="h-6 w-6" />
+      </div>
+      <div className="space-y-2">
+        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-rose-400 px-2 py-0.5 border border-rose-500/30 bg-rose-500/10">
+          Administrator Role Clearance Required
+        </span>
+        <h2 className="text-2xl font-serif text-[#F5F2ED] tracking-wide mt-2">
+          Restricted Security Module
+        </h2>
+        <p className="text-xs text-white/60 leading-relaxed max-w-md mx-auto">
+          Access to <span className="text-rose-300 font-medium font-mono">{featureName}</span> is restricted to the <strong className="text-[#F5F2ED]">ADMIN</strong> security role under our PoLP governance standard.
+        </p>
+      </div>
+
+      <div className="p-3 bg-white/[0.02] border border-white/10 text-[11px] font-mono text-white/50 text-left space-y-1">
+        <div>Current Session: <span className="text-[#C5A059]">{userRole}</span></div>
+        <div>Required Role: <span className="text-rose-400 font-bold">ADMIN (Security & Operations)</span></div>
+        <div>Policy: Least-Privilege Role Isolation & Cloud Run Protection</div>
+      </div>
+
+      <div className="pt-2 flex items-center justify-center gap-3">
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono uppercase tracking-wider transition-all cursor-pointer font-semibold shadow-lg"
+          id="guard-switch-role-btn"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Log Out to Switch Role</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DepartmentAccessNotice({
+  featureName,
+  onReturnToDashboard,
+}: {
+  featureName: string;
+  onReturnToDashboard: () => void;
+}) {
+  return (
+    <div className="p-8 max-w-xl mx-auto my-12 bg-[#0E0E0E] border border-white/10 text-center space-y-4 shadow-xl">
+      <div className="w-10 h-10 mx-auto rounded-full bg-[#C5A059]/10 border border-[#C5A059]/30 flex items-center justify-center text-[#C5A059]">
+        <Film className="h-5 w-5" />
+      </div>
+      <div className="space-y-1">
+        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#C5A059]">
+          Department Clearance Feature
+        </span>
+        <h2 className="text-xl font-serif text-[#F5F2ED]">{featureName}</h2>
+      </div>
+      <p className="text-xs text-white/60 max-w-md mx-auto leading-relaxed">
+        This module is reserved for creative and production department crew members. Admin clearance focuses exclusively on Security & Cloud Ops, Sandbox Telemetry, Overview Dashboard, and Creative Journal Review.
+      </p>
+      <div className="pt-2">
+        <button
+          onClick={onReturnToDashboard}
+          className="px-5 py-2.5 bg-[#C5A059] hover:bg-[#d4b06a] text-black text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-md"
+          id="department-return-dashboard-btn"
+        >
+          Return to Overview Dashboard
+        </button>
+      </div>
     </div>
   );
 }

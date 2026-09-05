@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { requireAuth, requireProjectMember } from '../middleware/auth.js';
+import { requireAuth, requireProjectMember, requireRole } from '../middleware/auth.js';
 import { getObservabilityMetrics, getProjectAuditLogs, recordAuditLog } from '../observability.js';
 
 export const observabilityRouter = Router();
 
-// GET /api/observability/metrics (Health & SLIs/SLOs)
-observabilityRouter.get('/metrics', (_req, res) => {
+// GET /api/observability/metrics (Health & SLIs/SLOs) - Admin only
+observabilityRouter.get('/metrics', requireAuth, requireRole(['ADMIN']), (_req, res) => {
   const metrics = getObservabilityMetrics();
   res.json({
     status: 'healthy',
@@ -14,8 +14,8 @@ observabilityRouter.get('/metrics', (_req, res) => {
   });
 });
 
-// GET /api/projects/:projectId/audit-logs
-observabilityRouter.get('/projects/:projectId/audit-logs', requireAuth, requireProjectMember, (req, res) => {
+// GET /api/projects/:projectId/audit-logs - Admin only
+observabilityRouter.get('/projects/:projectId/audit-logs', requireAuth, requireRole(['ADMIN']), requireProjectMember, (req, res) => {
   const logs = getProjectAuditLogs(req.projectId!);
   res.json({ logs });
 });

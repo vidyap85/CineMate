@@ -1,5 +1,5 @@
 import React from 'react';
-import { DollarSign, FileCheck, Hammer, ArrowLeftRight, TrendingUp, AlertTriangle, ShieldCheck, ArrowRight } from 'lucide-react';
+import { DollarSign, FileCheck, Hammer, ArrowLeftRight, TrendingUp, AlertTriangle, ShieldCheck, ArrowRight, BarChart3 } from 'lucide-react';
 import type { FilmProject, LocationItem, ShootDayItem } from '../../types';
 
 interface ProducerDashboardProps {
@@ -53,6 +53,14 @@ export const ProducerDashboard: React.FC<ProducerDashboardProps> = ({
             >
               <Hammer className="h-3.5 w-3.5 text-[#C5A059]" />
               <span>Set Construction</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('budget_risk')}
+              className="flex items-center gap-2.5 px-6 py-3.5 bg-[#C5A059]/10 hover:bg-[#C5A059]/20 border border-[#C5A059]/40 text-[#C5A059] text-xs uppercase tracking-[0.15em] font-medium transition-all cursor-pointer"
+              id="producer-monte-carlo-btn"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span>Monte Carlo & Payroll</span>
             </button>
           </div>
         </div>

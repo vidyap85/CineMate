@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { DirectorDashboard } from './DirectorDashboard';
 import { ProducerDashboard } from './ProducerDashboard';
 import { CinematographerDashboard } from './CinematographerDashboard';
+import { AdminDashboard } from './AdminDashboard';
 import { ShieldCheck, LogOut, Lock } from 'lucide-react';
 import type { FilmProject, LocationItem, SceneItem, ShootDayItem } from '../../types';
 
@@ -95,6 +96,10 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           scenes={scenes}
           setActiveTab={setActiveTab}
         />
+      )}
+
+      {userRole === 'ADMIN' && (
+        <AdminDashboard setActiveTab={setActiveTab} />
       )}
     </div>
   );

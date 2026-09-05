@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireProjectMember } from '../middleware/auth.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimiter.js';
 import { getServiceAccountIdentity } from '../secrets.js';
 import {
@@ -18,9 +18,9 @@ const sandboxRateLimiter = createRateLimiter(60000, 40, 'Sandbox Calculation Eng
 /**
  * GET /api/sandbox/identity
  * Returns the active Service Account identity, least-privilege verification status,
- * and sandbox isolation capabilities.
+ * and sandbox isolation capabilities. Restricted to ADMIN role.
  */
-sandboxRouter.get('/identity', async (_req, res) => {
+sandboxRouter.get('/identity', requireAuth, requireRole(['ADMIN']), async (_req, res) => {
   const sa = getServiceAccountIdentity();
   res.json({
     success: true,
@@ -48,8 +48,9 @@ sandboxRouter.get('/identity', async (_req, res) => {
 /**
  * POST /api/sandbox/monte-carlo
  * Runs sandboxed Monte Carlo budget simulation (N=1,000 randomized production risk runs).
+ * Restricted to ADMIN and PRODUCER roles.
  */
-sandboxRouter.post('/monte-carlo', requireAuth, sandboxRateLimiter, async (req, res) => {
+sandboxRouter.post('/monte-carlo', requireAuth, requireRole(['ADMIN', 'PRODUCER']), sandboxRateLimiter, async (req, res) => {
   const startTime = Date.now();
   const body = (req.body && typeof req.body === 'object') ? req.body : {};
   const baseBudget = Number(body.baseBudget) || 150000;
@@ -93,8 +94,9 @@ sandboxRouter.post('/monte-carlo', requireAuth, sandboxRateLimiter, async (req, 
 /**
  * POST /api/sandbox/union-payroll
  * Evaluates union turnaround and overtime payroll rules in the hardened VM sandbox.
+ * Restricted to ADMIN and PRODUCER roles.
  */
-sandboxRouter.post('/union-payroll', requireAuth, sandboxRateLimiter, async (req, res) => {
+sandboxRouter.post('/union-payroll', requireAuth, requireRole(['ADMIN', 'PRODUCER']), sandboxRateLimiter, async (req, res) => {
   const startTime = Date.now();
   const body = (req.body && typeof req.body === 'object') ? req.body : {};
   const baseDayRate = Number(body.baseDayRate) || 3500;
@@ -122,8 +124,8 @@ sandboxRouter.post('/union-payroll', requireAuth, sandboxRateLimiter, async (req
     recordAuditLog({
       projectId: req.projectId || 'project-aurora-001',
       userId: req.user?.uid || 'sandbox-user',
-      userName: req.user?.name || 'Dedicated Producer',
-      userRole: req.user?.role || 'PRODUCER',
+      userName: req.user?.name || 'Security Admin',
+      userRole: req.user?.role || 'ADMIN',
       action: 'SANDBOX_UNION_PAYROLL_EVALUATION',
       resourceType: 'SANDBOX',
       details: `Evaluated turnaround & overtime payroll rules (${actualWorkHours}h, ${crewCount} crew) in isolated VM sandbox`,
@@ -141,8 +143,9 @@ sandboxRouter.post('/union-payroll', requireAuth, sandboxRateLimiter, async (req
  * POST /api/sandbox/custom-formula
  * Safely executes user-defined calculation formulas in the isolated V8 VM.
  * Intercepts malicious attempts to reach process, require, global, or network.
+ * Restricted to ADMIN role.
  */
-sandboxRouter.post('/custom-formula', requireAuth, sandboxRateLimiter, async (req, res) => {
+sandboxRouter.post('/custom-formula', requireAuth, requireRole(['ADMIN']), sandboxRateLimiter, async (req, res) => {
   const startTime = Date.now();
   const body = (req.body && typeof req.body === 'object') ? req.body : {};
   const formula = typeof body.formula === 'string' ? body.formula : '';
@@ -159,8 +162,8 @@ sandboxRouter.post('/custom-formula', requireAuth, sandboxRateLimiter, async (re
     recordAuditLog({
       projectId: req.projectId || 'project-aurora-001',
       userId: req.user?.uid || 'sandbox-user',
-      userName: req.user?.name || 'Dedicated Producer',
-      userRole: req.user?.role || 'PRODUCER',
+      userName: req.user?.name || 'Security Admin',
+      userRole: req.user?.role || 'ADMIN',
       action: 'SANDBOX_CUSTOM_FORMULA_EVAL',
       resourceType: 'SANDBOX',
       details: `Executed custom formula in isolated sandbox (interceptions: ${result.securityInterceptions.length})`,
@@ -177,8 +180,9 @@ sandboxRouter.post('/custom-formula', requireAuth, sandboxRateLimiter, async (re
 /**
  * POST /api/sandbox/gemini-code-execution
  * Executes server-side Python calculations via Gemini Code Execution container sandbox.
+ * Restricted to ADMIN role.
  */
-sandboxRouter.post('/gemini-code-execution', requireAuth, sandboxRateLimiter, async (req, res) => {
+sandboxRouter.post('/gemini-code-execution', requireAuth, requireRole(['ADMIN']), sandboxRateLimiter, async (req, res) => {
   const startTime = Date.now();
   const body = (req.body && typeof req.body === 'object') ? req.body : {};
   const prompt = typeof body.prompt === 'string' ? body.prompt : '';
