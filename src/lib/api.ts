@@ -108,10 +108,13 @@ export const api = {
     request<{ success: boolean; scenes: SceneItem[] }>(`/api/projects/${projectId}/scenes`),
 
   createScene: (projectId: string, scene: Partial<SceneItem>) =>
-    request<{ success: boolean; scene: SceneItem }>(`/api/projects/${projectId}/scenes`, {
-      method: 'POST',
-      body: JSON.stringify(scene),
-    }),
+    request<{ success: boolean; scene: SceneItem; shootDays?: ShootDayItem[]; locations?: LocationItem[] }>(
+      `/api/projects/${projectId}/scenes`,
+      {
+        method: 'POST',
+        body: JSON.stringify(scene),
+      }
+    ),
 
   updateScene: (projectId: string, sceneId: string, updates: Partial<SceneItem>) =>
     request<{ success: boolean; scene: SceneItem }>(`/api/projects/${projectId}/scenes/${sceneId}`, {

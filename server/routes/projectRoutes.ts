@@ -401,20 +401,36 @@ projectRouter.post('/:projectId/scenes', requireAuth, requireProjectMember, (req
   }
 
   const locations = locationsStore[req.projectId!] || [];
-  const matchedLoc = locations.find((l) => l.locationId === locationId);
+  const matchedLoc = locations.find(
+    (l) => l.locationId === locationId || (req.body.locationName && l.name.toLowerCase() === String(req.body.locationName).toLowerCase())
+  );
+
+  const resolvedLocationName = req.body.locationName || matchedLoc?.name || 'Assigned Location';
+  const resolvedShootDay = Number(String(shootDay).replace(/\D/g, '')) || 1;
+  const cleanSceneNumber = String(sceneNumber).replace(/^scene\s*/i, '').trim() || '1';
 
   const newScene: SceneItem = {
     sceneId: `scene_${Date.now()}`,
     projectId: req.projectId!,
-    shootDay: shootDay || 1,
-    sceneNumber: String(sceneNumber),
-    locationId: locationId || (locations[0]?.locationId ?? 'loc-dubai-marina'),
-    locationName: matchedLoc?.name || 'Assigned Location',
+    shootDay: resolvedShootDay,
+    sceneNumber: cleanSceneNumber,
+    locationId: locationId || matchedLoc?.locationId || `loc-${Date.now()}`,
+    locationName: resolvedLocationName,
     shootingTime: shootingTime || '06:00 AM',
     timeOfDay: timeOfDay || 'Morning',
     description,
-    directorNotes,
-    cinematographyNotes,
+    directorNotes: directorNotes || (description ? `Director vision: ${description}` : undefined),
+    producerNotes: req.body.producerNotes || req.body.productionConsiderations || 'Permit & logistics clearance registered for production.',
+    productionConsiderations: req.body.productionConsiderations || req.body.producerNotes,
+    weatherDependency: req.body.weatherDependency,
+    lightingDependency: req.body.lightingDependency,
+    cinematographyNotes: cinematographyNotes || {
+      lightingRequirement: req.body.lightingDependency || 'Natural Lighting Key',
+      naturalLightPreference: req.body.lightingDependency,
+      weatherBackup: req.body.weatherDependency || 'Cover set backup',
+      lens: 'Anamorphic 35mm / 50mm Prime',
+      cameraMovement: 'Dynamic tracking shot',
+    },
     createdBy: req.user!.uid,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -422,6 +438,63 @@ projectRouter.post('/:projectId/scenes', requireAuth, requireProjectMember, (req
 
   if (!scenesStore[req.projectId!]) scenesStore[req.projectId!] = [];
   scenesStore[req.projectId!].push(newScene);
+
+  // Synchronize shootDaysStore so newly added shoot days (e.g. Day 4) appear immediately for all roles
+  if (!shootDaysStore[req.projectId!]) shootDaysStore[req.projectId!] = [];
+  let targetDay = shootDaysStore[req.projectId!].find((d) => d.dayNumber === resolvedShootDay);
+  if (!targetDay) {
+    targetDay = {
+      dayId: `day-${resolvedShootDay}`,
+      projectId: req.projectId!,
+      dayNumber: resolvedShootDay,
+      date: new Date(Date.now() + (resolvedShootDay - 1) * 86400000).toISOString().split('T')[0],
+      title: `Shoot Day ${resolvedShootDay}: ${resolvedLocationName}`,
+      callTime: shootingTime || '06:00 AM',
+      wrapTime: '06:00 PM',
+      sceneIds: [newScene.sceneId],
+      totalEstimatedCost: 28000,
+      travelTimeMinutes: 30,
+      notes: `Production schedule for Scene ${newScene.sceneNumber} at ${resolvedLocationName}`,
+    };
+    shootDaysStore[req.projectId!].push(targetDay);
+    shootDaysStore[req.projectId!].sort((a, b) => a.dayNumber - b.dayNumber);
+  } else {
+    if (!targetDay.sceneIds.includes(newScene.sceneId)) {
+      targetDay.sceneIds.push(newScene.sceneId);
+    }
+  }
+
+  // Register location in locationsStore if not already present
+  if (!matchedLoc && req.body.locationName) {
+    const newLoc: LocationItem = {
+      locationId: newScene.locationId,
+      projectId: req.projectId!,
+      name: resolvedLocationName,
+      address: `${resolvedLocationName}, Dubai, United Arab Emirates`,
+      latitude: 25.2048,
+      longitude: 55.2708,
+      category: 'Heritage',
+      notes: newScene.productionConsiderations || newScene.description,
+      sceneReferences: [newScene.sceneId],
+      shootingDays: [resolvedShootDay],
+      permitStatus: 'UNVERIFIED',
+      estimatedCostRange: { low: 10000, expected: 15000, high: 22000, currency: 'AED' },
+      weatherSummary: 'Clear skies, outdoor lighting dependent',
+      lightingNotes: newScene.lightingDependency || 'Natural light and street lights',
+      createdBy: req.user!.uid,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    locationsStore[req.projectId!].push(newLoc);
+  } else if (matchedLoc) {
+    if (!matchedLoc.sceneReferences.includes(newScene.sceneId)) {
+      matchedLoc.sceneReferences.push(newScene.sceneId);
+    }
+    if (!matchedLoc.shootingDays.includes(resolvedShootDay)) {
+      matchedLoc.shootingDays.push(resolvedShootDay);
+      matchedLoc.shootingDays.sort((a, b) => a - b);
+    }
+  }
 
   recordAuditLog({
     projectId: req.projectId!,
@@ -431,10 +504,15 @@ projectRouter.post('/:projectId/scenes', requireAuth, requireProjectMember, (req
     action: 'SCENE_CREATED',
     resourceType: 'SCENE',
     resourceId: newScene.sceneId,
-    details: `Added Scene ${newScene.sceneNumber} for Shoot Day ${newScene.shootDay}`,
+    details: `Added Scene ${newScene.sceneNumber} for Shoot Day ${newScene.shootDay} at ${newScene.locationName}`,
   });
 
-  res.status(201).json({ success: true, scene: newScene });
+  res.status(201).json({
+    success: true,
+    scene: newScene,
+    shootDays: shootDaysStore[req.projectId!],
+    locations: locationsStore[req.projectId!],
+  });
 });
 
 // PUT /api/projects/:projectId/scenes/:sceneId

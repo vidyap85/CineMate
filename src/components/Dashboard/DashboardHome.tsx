@@ -86,6 +86,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           project={project}
           locations={locations}
           shootDays={shootDays}
+          scenes={scenes}
           setActiveTab={setActiveTab}
         />
       )}

@@ -203,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab = 'dashboard', setActi
                     className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-xs font-mono uppercase tracking-wider rounded-lg transition-colors cursor-pointer font-semibold"
                     id="nav-logout-btn"
                   >
-                    <span>Log Out & Return to Login Portal</span>
+                    <span>Log Out & Return to Role Login</span>
                   </button>
                 </div>
               </div>

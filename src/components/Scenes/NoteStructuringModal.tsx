@@ -58,18 +58,28 @@ export const NoteStructuringModal: React.FC<NoteStructuringModalProps> = ({
     if (!structuredData) return;
     setIsSaving(true);
     try {
+      const parsedDay =
+        typeof structuredData.shootDay === 'number'
+          ? structuredData.shootDay
+          : parseInt(String(structuredData.shootDay).replace(/\D/g, ''), 10) || 1;
+
+      const cleanSceneNumber = String(structuredData.sceneNumber).replace(/^scene\s*/i, '').trim() || '1';
+
       await onSceneCreated({
-        shootDay: structuredData.shootDay || 1,
-        sceneNumber: structuredData.sceneNumber || '1',
+        shootDay: parsedDay,
+        sceneNumber: cleanSceneNumber,
         locationName: structuredData.locationName,
         shootingTime: structuredData.suggestedShootingTime,
         timeOfDay: structuredData.timeOfDay as any,
         description: structuredData.sceneDescription,
         directorNotes: `Director vision: ${structuredData.sceneDescription}`,
+        producerNotes: structuredData.productionConsiderations,
         cinematographyNotes: {
+          lens: '35mm / Anamorphic Low-Light Prime',
           lightingRequirement: structuredData.lightingDependency,
           naturalLightPreference: structuredData.lightingDependency,
           weatherBackup: structuredData.weatherDependency,
+          cameraMovement: 'Dynamic tracking shot',
         },
         weatherDependency: structuredData.weatherDependency,
         lightingDependency: structuredData.lightingDependency,

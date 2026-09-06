@@ -59,18 +59,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             { id: 'scenes', label: 'Scenes & Breakdown', icon: Film },
             { id: 'master_report', label: 'Master Shooting Report', icon: FileSpreadsheet },
             { id: 'production_scout', label: 'AI Production Scout', icon: Compass, highlight: true },
-            { id: 'location_swap', label: 'Location Swap Simulator', icon: ArrowLeftRight },
+            ...(userRole !== 'CINEMATOGRAPHER'
+              ? [{ id: 'location_swap', label: 'Location Swap Simulator', icon: ArrowLeftRight }]
+              : []),
           ],
         },
         {
           label: 'Department Tools',
           items: [
-            { id: 'cost_planning', label: 'Cost & Permit Intelligence', icon: DollarSign },
+            { id: 'journal', label: 'Gemini Creative Journal', icon: BookOpen },
+            ...(userRole !== 'CINEMATOGRAPHER'
+              ? [{ id: 'cost_planning', label: 'Cost & Permit Intelligence', icon: DollarSign }]
+              : []),
             ...(userRole === 'PRODUCER'
               ? [{ id: 'budget_risk', label: 'Monte Carlo & Payroll Rules', icon: BarChart3, highlight: true }]
               : []),
-            { id: 'weather_lighting', label: 'Sun & Lighting Advisor', icon: Sun },
-            { id: 'journal', label: 'Gemini Creative Journal', icon: BookOpen },
+            ...(userRole !== 'PRODUCER'
+              ? [{ id: 'weather_lighting', label: 'Sun & Lighting Advisor', icon: Sun }]
+              : []),
           ],
         },
         {

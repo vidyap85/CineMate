@@ -12,7 +12,6 @@ import {
   Lock,
   Mail,
   KeyRound,
-  ChevronRight,
   Sun,
   Layers,
   FileCheck,
@@ -32,7 +31,6 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
   const [activeRoleTab, setActiveRoleTab] = useState<UserRole>(initialRole || selectedLoginRole || 'DIRECTOR');
   const [customEmail, setCustomEmail] = useState<string>('');
   const [passkeyInput, setPasskeyInput] = useState<string>('••••••••••••');
-  const [viewMode, setViewMode] = useState<'individual' | 'gateway'>('individual');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeRoleData = availableRoles.find((r) => r.role === activeRoleTab) || availableRoles[0];
@@ -137,44 +135,22 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
               </span>
             </div>
             <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono">
-              Project Aurora • Security Enforced (RBAC Level 3)
+              Project Aurora • Security Enforced
             </p>
           </div>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-2 border border-white/10 bg-white/[0.02] p-1">
-          <button
-            onClick={() => setViewMode('individual')}
-            className={`px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-all ${
-              viewMode === 'individual'
-                ? 'bg-[#C5A059] text-black font-semibold shadow-sm'
-                : 'text-white/60 hover:text-white'
-            }`}
-            id="login-view-individual-btn"
-          >
-            Role Login Page
-          </button>
-          <button
-            onClick={() => setViewMode('gateway')}
-            className={`px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-all ${
-              viewMode === 'gateway'
-                ? 'bg-[#C5A059] text-black font-semibold shadow-sm'
-                : 'text-white/60 hover:text-white'
-            }`}
-            id="login-view-gateway-btn"
-          >
-            3-Portal Hub
-          </button>
+        {/* Security Badge */}
+        <div className="flex items-center gap-2 border border-white/10 bg-white/[0.02] px-3 py-1.5 text-[11px] font-mono text-white/60">
+          <Lock className="h-3.5 w-3.5 text-[#C5A059]" />
+          <span>ROLE LOGIN PAGE</span>
         </div>
       </header>
 
       {/* Main Login Body */}
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-12 py-10">
-        {viewMode === 'individual' ? (
-          /* ================= INDIVIDUAL ROLE LOGIN VIEW ================= */
-          <div className="w-full max-w-4xl bg-[#0D0D0D] border border-white/10 shadow-2xl overflow-hidden">
-            {/* Role Switcher Tabs */}
+        <div className="w-full max-w-4xl bg-[#0D0D0D] border border-white/10 shadow-2xl overflow-hidden">
+          {/* Role Switcher Tabs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-white/10 bg-[#0A0A0A]">
               {(['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER', 'ADMIN'] as UserRole[]).map((role) => {
                 const meta = getRoleMetadata(role);
@@ -317,10 +293,6 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
                         <span>Role Boundary</span>
                         <span className="text-[#F5F2ED]">{activeRoleTab}</span>
                       </div>
-                      <div className="flex items-center justify-between text-[10px] font-mono text-white/50">
-                        <span>Security Standard</span>
-                        <span className="text-emerald-400">OWASP A01 / RBAC</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -355,91 +327,6 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
               </div>
             </div>
           </div>
-        ) : (
-          /* ================= 3-PORTAL HUB VIEW ================= */
-          <div className="w-full max-w-6xl">
-            <div className="text-center mb-10">
-              <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#C5A059] px-2 py-1 border border-[#C5A059]/30 bg-[#C5A059]/10">
-                Production Department Gateways
-              </span>
-              <h1 className="text-3xl sm:text-4xl font-serif text-[#F5F2ED] tracking-wide mt-3 mb-2">
-                Select Your Role Portal
-              </h1>
-              <p className="text-xs text-white/50 max-w-lg mx-auto">
-                Each portal loads role-specific AI tools, data isolation boundaries, and production dashboards for Project Aurora.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {(['DIRECTOR', 'PRODUCER', 'CINEMATOGRAPHER', 'ADMIN'] as UserRole[]).map((role) => {
-                const meta = getRoleMetadata(role);
-                const roleData = availableRoles.find((r) => r.role === role)!;
-                const RoleIcon = meta.icon;
-
-                return (
-                  <div
-                    key={role}
-                    className="bg-[#0D0D0D] border border-white/10 hover:border-[#C5A059]/50 transition-all p-6 flex flex-col justify-between group shadow-xl"
-                    id={`card-portal-${role.toLowerCase()}`}
-                  >
-                    <div>
-                      {/* Top badge */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="p-2.5 bg-[#C5A059]/10 border border-[#C5A059]/30 text-[#C5A059]">
-                          <RoleIcon className="h-5 w-5" />
-                        </div>
-                        <span className="text-[9px] font-mono uppercase tracking-widest px-2 py-0.5 border border-white/10 text-white/60">
-                          {meta.badge}
-                        </span>
-                      </div>
-
-                      <h2 className="text-xl font-serif text-[#F5F2ED] tracking-wide mb-1 group-hover:text-[#C5A059] transition-colors">
-                        {meta.title}
-                      </h2>
-                      <p className="text-xs text-white/50 mb-6">{meta.subtitle}</p>
-
-                      {/* Lead user */}
-                      <div className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/5 mb-6">
-                        <img
-                          src={roleData.avatar}
-                          alt={roleData.name}
-                          className="h-8 w-8 rounded-full object-cover border border-[#C5A059]/30"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs font-serif text-[#F5F2ED] truncate">{roleData.name}</p>
-                          <p className="text-[10px] font-mono text-white/40 truncate">{roleData.email}</p>
-                        </div>
-                      </div>
-
-                      {/* Privileges list */}
-                      <div className="space-y-2 mb-6">
-                        <p className="text-[10px] font-mono uppercase tracking-wider text-white/40">Core Capabilities</p>
-                        {roleData.permissions.slice(0, 3).map((perm, pIdx) => (
-                          <div key={pIdx} className="flex items-center gap-2 text-xs text-white/70">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-[#C5A059] shrink-0" />
-                            <span className="truncate">{perm}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Button */}
-                    <div className="pt-4 border-t border-white/10">
-                      <button
-                        onClick={() => handleRoleLogin(role, roleData.email)}
-                        className="w-full py-2.5 px-3 bg-[#141414] hover:bg-[#C5A059] text-white hover:text-black font-semibold text-xs uppercase tracking-wider border border-white/20 hover:border-[#C5A059] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                        id={`btn-portal-enter-${role.toLowerCase()}`}
-                      >
-                        <span>Launch {role} Portal</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Footer / Threat & Security Compliance Bar */}

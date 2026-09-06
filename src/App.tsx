@@ -48,6 +48,25 @@ function CineMateMain() {
     loadProjectData();
   }, [currentUser]);
 
+  // Role-based route guarding:
+  // - Producers do not need the lighting advisory module
+  // - Cinematographers do not need the location swap simulator or cost & permit intelligence modules
+  useEffect(() => {
+    if (userRole === 'PRODUCER' && (activeTab === 'weather_lighting' || activeTab === 'weather-lighting')) {
+      setActiveTab('dashboard');
+    }
+    if (
+      userRole === 'CINEMATOGRAPHER' &&
+      (activeTab === 'location_swap' ||
+        activeTab === 'location-swap' ||
+        activeTab === 'cost_planning' ||
+        activeTab === 'cost-planning' ||
+        activeTab === 'set-estimate')
+    ) {
+      setActiveTab('dashboard');
+    }
+  }, [userRole, activeTab]);
+
   const loadProjectData = async () => {
     try {
       const [projRes, locsRes, scenesRes, daysRes] = await Promise.all([
@@ -88,10 +107,44 @@ function CineMateMain() {
     setLocations((prev) => prev.filter((l) => l.locationId !== locId));
   };
 
+  const [selectedDayTab, setSelectedDayTab] = useState<number>(1);
+
   const handleSceneCreated = async (sceneData: Partial<SceneItem>) => {
-    const res = await api.createScene('project-aurora-001', sceneData);
-    if (res.success && res.scene) {
-      setScenes((prev) => [...prev, res.scene]);
+    try {
+      const res = await api.createScene('project-aurora-001', sceneData);
+      if (res.success && res.scene) {
+        setScenes((prev) => {
+          const exists = prev.some((s) => s.sceneId === res.scene.sceneId);
+          return exists ? prev.map((s) => (s.sceneId === res.scene.sceneId ? res.scene : s)) : [...prev, res.scene];
+        });
+
+        if (res.shootDays && res.shootDays.length > 0) {
+          setShootDays(res.shootDays);
+        } else {
+          const daysRes = await api.getShootDays('project-aurora-001');
+          if (daysRes?.shootDays && daysRes.shootDays.length > 0) {
+            setShootDays(daysRes.shootDays);
+          }
+        }
+
+        if (res.locations && res.locations.length > 0) {
+          setLocations(res.locations);
+        } else {
+          const locsRes = await api.getLocations('project-aurora-001');
+          if (locsRes?.locations && locsRes.locations.length > 0) {
+            setLocations(locsRes.locations);
+          }
+        }
+
+        if (res.scene.shootDay) {
+          setSelectedDayTab(res.scene.shootDay);
+        }
+
+        setActiveTab('scenes');
+      }
+    } catch (err: unknown) {
+      console.error('Failed to create scene:', err);
+      alert('Failed to add scene: ' + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -196,6 +249,9 @@ function CineMateMain() {
                 scenes={scenes}
                 locations={locations}
                 shootDays={shootDays}
+                userRole={userRole}
+                activeDay={selectedDayTab}
+                onSelectDay={setSelectedDayTab}
                 onOpenNoteModal={() => setIsNoteModalOpen(true)}
                 onAddNewScene={() => setIsNoteModalOpen(true)}
                 onEditScene={(scene) => {
@@ -225,9 +281,10 @@ function CineMateMain() {
           )}
 
           {(activeTab === 'cost_planning' || activeTab === 'cost-planning' || activeTab === 'set-estimate') && (
-            isAdmin ? (
+            isAdmin || userRole === 'CINEMATOGRAPHER' ? (
               <DepartmentAccessNotice
                 featureName="Cost & Permit Intelligence"
+                userRole={userRole}
                 onReturnToDashboard={() => setActiveTab('dashboard')}
               />
             ) : (
@@ -293,9 +350,10 @@ function CineMateMain() {
           )}
 
           {(activeTab === 'weather_lighting' || activeTab === 'weather-lighting') && (
-            isAdmin ? (
+            isAdmin || userRole === 'PRODUCER' ? (
               <DepartmentAccessNotice
                 featureName="Sun & Lighting Advisor"
+                userRole={userRole}
                 onReturnToDashboard={() => setActiveTab('dashboard')}
               />
             ) : (
@@ -319,9 +377,10 @@ function CineMateMain() {
           )}
 
           {(activeTab === 'location_swap' || activeTab === 'location-swap') && (
-            isAdmin ? (
+            isAdmin || userRole === 'CINEMATOGRAPHER' ? (
               <DepartmentAccessNotice
                 featureName="Location Swap Simulator"
+                userRole={userRole}
                 onReturnToDashboard={() => setActiveTab('dashboard')}
               />
             ) : (
@@ -485,10 +544,26 @@ function AdminRestrictedGuard({
 function DepartmentAccessNotice({
   featureName,
   onReturnToDashboard,
+  userRole,
 }: {
   featureName: string;
   onReturnToDashboard: () => void;
+  userRole?: string;
 }) {
+  const isProducer = userRole === 'PRODUCER';
+  const isCinematographer = userRole === 'CINEMATOGRAPHER';
+
+  let roleExplanation =
+    'This module is reserved for creative and production department crew members. Admin clearance focuses exclusively on Security & Cloud Ops, Sandbox Telemetry, Overview Dashboard, and Creative Journal Review.';
+
+  if (isProducer) {
+    roleExplanation =
+      'This module is designated for Cinematography and Director visual departments. As Line Producer, your workflow is focused on Financial Intelligence, Permit Authority, and Monte Carlo Budget Risk.';
+  } else if (isCinematographer) {
+    roleExplanation =
+      'This module is designated for Producer and Production Logistics management. As Cinematographer (DP), your workflow is focused on Optics, Visual Composition, Astronomical Sun & Lighting Advisory, and Technical Camera Packages.';
+  }
+
   return (
     <div className="p-8 max-w-xl mx-auto my-12 bg-[#0E0E0E] border border-white/10 text-center space-y-4 shadow-xl">
       <div className="w-10 h-10 mx-auto rounded-full bg-[#C5A059]/10 border border-[#C5A059]/30 flex items-center justify-center text-[#C5A059]">
@@ -501,7 +576,7 @@ function DepartmentAccessNotice({
         <h2 className="text-xl font-serif text-[#F5F2ED]">{featureName}</h2>
       </div>
       <p className="text-xs text-white/60 max-w-md mx-auto leading-relaxed">
-        This module is reserved for creative and production department crew members. Admin clearance focuses exclusively on Security & Cloud Ops, Sandbox Telemetry, Overview Dashboard, and Creative Journal Review.
+        {roleExplanation}
       </p>
       <div className="pt-2">
         <button
