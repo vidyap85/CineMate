@@ -25,7 +25,7 @@ export const LocationReportView: React.FC<LocationReportViewProps> = ({
       projectName: 'Project Aurora',
       title: 'Project Aurora - Master Location Shooting Report',
       generatedAt: '2026-09-02T04:00:00Z',
-      generatedBy: 'Vidya (Director) & CineMate AI',
+      generatedBy: 'Sofia Chen (Director) & CineMate AI',
       version: 1,
       overallProductionScore: 84,
       executiveSummary:

@@ -29,7 +29,7 @@ interface RoleLoginPageProps {
 export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLoginSuccess }) => {
   const { availableRoles, loginAsRole, selectedLoginRole, setSelectedLoginRole } = useAuth();
   const [activeRoleTab, setActiveRoleTab] = useState<UserRole>(initialRole || selectedLoginRole || 'DIRECTOR');
-  const [customEmail, setCustomEmail] = useState<string>('');
+  const [customEmail, setCustomEmail] = useState<string>('director@cinegemini.io');
   const [passkeyInput, setPasskeyInput] = useState<string>('••••••••••••');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,7 +38,7 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
   const handleRoleLogin = (role: UserRole, emailOverride?: string) => {
     setIsSubmitting(true);
     setTimeout(() => {
-      loginAsRole(role, emailOverride || (customEmail ? customEmail : undefined));
+      loginAsRole(role, emailOverride || customEmail || undefined);
       setIsSubmitting(false);
       onLoginSuccess?.();
     }, 350);
@@ -60,8 +60,8 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
             { icon: Sparkles, title: 'Gemini Location Intelligence', desc: 'Synthesize location scouts with moodboards and aesthetic briefs.' },
             { icon: Send, title: 'Crew Slack Call Sheets', desc: 'Dispatch daily schedules directly to cast and heads of department.' },
           ],
-          defaultEmail: 'vidyap85@gmail.com',
-          holderName: 'Vidya (Director Lead)',
+          defaultEmail: 'director@cinegemini.io',
+          holderName: 'Sofia Chen (Director Lead)',
         };
       case 'PRODUCER':
         return {
@@ -162,7 +162,7 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
                     onClick={() => {
                       setActiveRoleTab(role);
                       setSelectedLoginRole(role);
-                      setCustomEmail('');
+                      setCustomEmail(meta.defaultEmail);
                     }}
                     className={`py-3.5 px-4 text-left transition-all flex items-center justify-center sm:justify-start gap-3 border-b-2 ${
                       isActive
@@ -259,7 +259,7 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                         <input
                           type="email"
-                          value={customEmail || currentMeta.defaultEmail}
+                          value={customEmail}
                           onChange={(e) => setCustomEmail(e.target.value)}
                           placeholder={currentMeta.defaultEmail}
                           className="w-full bg-[#141414] border border-white/15 px-3 py-2.5 pl-9 text-xs text-[#F5F2ED] placeholder:text-white/30 focus:border-[#C5A059] focus:outline-none font-mono"
@@ -338,7 +338,7 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ initialRole, onLog
         <div className="flex items-center gap-4">
           <span>Active Project: Project Aurora (001)</span>
           <span>•</span>
-          <span>Server Model: Gemini 3.6 Flash</span>
+          <span>Server Model: Multi-Tier AI Engine</span>
         </div>
       </footer>
     </div>

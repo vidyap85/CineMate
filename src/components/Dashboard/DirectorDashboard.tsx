@@ -130,7 +130,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({
             <Sparkles className="h-4 w-4 text-[#C5A059]" />
             <h2 className="text-xs uppercase tracking-[0.2em] font-semibold text-[#F5F2ED]">Quick Director Vision Ingestion</h2>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-white/40 font-mono">Gemini 3.6 Flash Ladder</span>
+          <span className="text-[10px] uppercase tracking-widest text-white/40 font-mono">AI Structured Analysis</span>
         </div>
 
         <form onSubmit={handleQuickStructure} className="space-y-4">

@@ -406,7 +406,7 @@ export const GeminiJournal: React.FC = () => {
                     </h3>
                   </div>
                   <p className="text-[11px] text-white/50 mt-0.5">
-                    Multi-turn Gemini 3.6 Flash reasoning • Contextually tailored for {userRole.toLowerCase()}
+                    Multi-turn Gemini reasoning • Contextually tailored for {userRole.toLowerCase()}
                   </p>
                 </div>
 

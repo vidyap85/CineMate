@@ -11,8 +11,8 @@ export const INITIAL_PROJECT: FilmProject = {
   members: {
     'user-director-001': {
       uid: 'user-director-001',
-      name: 'Vidya',
-      email: 'vidyap85@gmail.com',
+      name: 'Sofia Chen',
+      email: 'director@cinegemini.io',
       role: 'DIRECTOR',
       permissions: ['scout_locations', 'create_scenes', 'generate_report', 'send_slack'],
       joinedAt: '2026-08-01T08:00:00Z',

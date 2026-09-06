@@ -62,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab = 'dashboard', setActi
         <div className="hidden md:flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-none border border-white/10 bg-white/[0.02] text-[11px] text-white/70 uppercase tracking-widest font-mono">
             <span className="h-1.5 w-1.5 rounded-full bg-[#C5A059] animate-pulse"></span>
-            <span>Gemini 3.6 Flash</span>
+            <span>Studio AI Online</span>
           </div>
 
           {isAdmin ? (

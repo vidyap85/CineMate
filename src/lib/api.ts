@@ -18,7 +18,7 @@ import type {
   JournalEntry,
 } from '../types';
 
-let currentAuthToken = 'demo-DIRECTOR:user-director-001:vidyap85@gmail.com:Vidya (Director)';
+let currentAuthToken = 'demo-DIRECTOR:user-director-001:director@cinegemini.io:Sofia Chen (Director)';
 
 export function setApiAuthToken(token: string) {
   currentAuthToken = token;

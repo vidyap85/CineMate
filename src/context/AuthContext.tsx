@@ -20,8 +20,8 @@ interface AuthContextType {
 const PRESET_USERS: Record<UserRole, UserProfile> = {
   DIRECTOR: {
     uid: 'user-director-001',
-    email: 'vidyap85@gmail.com',
-    name: 'Vidya',
+    email: 'director@cinegemini.io',
+    name: 'Sofia Chen',
     role: 'DIRECTOR',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     projectIds: ['project-aurora-001'],
@@ -135,8 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     {
       role: 'DIRECTOR' as UserRole,
       label: 'Director (Creative & Visual)',
-      email: 'vidyap85@gmail.com',
-      name: 'Vidya',
+      email: 'director@cinegemini.io',
+      name: 'Sofia Chen',
       avatar: PRESET_USERS.DIRECTOR.avatar!,
       description: 'Visionary leadership, script-to-scene breakdown, aesthetic moodboards, director notes, and crew dispatch.',
       permissions: ['Location Scouting', 'Scene Breakdown', 'AI Vision Synthesis', 'Slack Dispatch', 'Full Studio Access'],

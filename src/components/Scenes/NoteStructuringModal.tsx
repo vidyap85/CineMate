@@ -133,7 +133,7 @@ export const NoteStructuringModal: React.FC<NoteStructuringModalProps> = ({
 
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-mono text-zinc-400">
-              Ladder: gemini-3.6-flash → gemini-3.1-flash-lite → dynamic fallback
+              Multi-Tier AI Resilient Engine
             </span>
             <button
               type="submit"

@@ -54,7 +54,7 @@ export const SlackIntegrationView: React.FC<SlackIntegrationViewProps> = ({
       projectName: 'Project Aurora',
       title: 'Project Aurora - Master Location Shooting Intelligence Plan',
       generatedAt: new Date().toISOString(),
-      generatedBy: 'Vidya (Director) & CineMate AI',
+      generatedBy: 'Sofia Chen (Director) & CineMate AI',
       version: 1,
       overallProductionScore: 84,
       executiveSummary:

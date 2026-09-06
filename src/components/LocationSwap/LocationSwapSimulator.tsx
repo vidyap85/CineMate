@@ -97,10 +97,6 @@ export const LocationSwapSimulator: React.FC<LocationSwapSimulatorProps> = ({ lo
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-[#C5A059] bg-[#C5A059]/10 px-3.5 py-2 rounded-xl border border-[#C5A059]/20">
-          <Sparkles className="h-4 w-4" />
-          <span>Gemini 3.7 Flash Engine</span>
-        </div>
       </div>
 
       {/* Configuration Form */}
